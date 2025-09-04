@@ -14,6 +14,18 @@
 
 ---
 
+## Shared Components
+
+**Scope:** `/internal/common` — Shared code used across all services.  
+**Modules:**
+
+- **Config** — Environment loading, validation, Hylo constants (program IDs, mints)
+- **Observability** — Structured logging, Prometheus metrics setup
+- **Types** — Common Solana types (`Address`, `Signature`, `Slot`, `Commitment`)
+- **Utils** — Address validation, decimal formatting, error types, Solscan URL builder
+
+---
+
 ## Block A — Helios Connectivity
 
 **Scope:** `/internal/solana` — HTTP + WS clients, retries/backoff, heartbeats, commitment handling.  
