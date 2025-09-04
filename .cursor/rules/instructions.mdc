@@ -8,3 +8,5 @@ Always use .env.example as the template for environment variables, add new varia
 Always ensure the project builds successfully and tests pass with at least 80% coverage before committing
 Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates
 Before starting any feature, review the @docs folder thoroughly - read the PRD, architecture, and current plan to understand context and avoid duplicating work
+Always write consice and easy to read code
+No not add trivial comments, add only if needed
