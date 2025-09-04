@@ -17,8 +17,16 @@
 
 **Scope:** `/pkg/solana` — HTTP + WS clients, retries/backoff, heartbeats, commitment handling.  
 **Inputs:** `RPC_HTTP_URL`, `RPC_WS_URL`.  
-**Outputs:** `GetAccount`, `ProgramSubscribe`, `LogsSubscribe`, `GetSignaturesForAddress`, `GetTransaction`.  
+**Outputs:** `GetAccount`, `AccountSubscribe`, `LogsSubscribe`, `GetSignaturesForAddress`, `GetTransaction`.  
 **Accept:** Stable subscribe/unsubscribe; reconnect with jitter; health probe green.
+
+**Function Usage:**
+
+- `GetAccount` — Price engine reads Pyth SOL/USD + Hylo state accounts
+- `AccountSubscribe` — Indexer watches specific wallet ATAs (hyUSD, sHYUSD, xSOL) + Hylo state accounts
+- `LogsSubscribe` — Indexer monitors Hylo program transaction logs
+- `GetSignaturesForAddress` — Historical backfill gets wallet's xSOL trade signatures
+- `GetTransaction` — Historical backfill fetches transaction details for parsing
 
 ---
 
