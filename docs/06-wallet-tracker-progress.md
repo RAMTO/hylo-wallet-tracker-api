@@ -12,11 +12,11 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 ### **Overall Progress**
 
 - [x] **Phase A1:** Foundation & HTTP Client _(4/4 tasks completed)_ ✅
-- [ ] **Phase A2:** WebSocket Client & Subscriptions _(0/4 tasks completed)_
-- [ ] **Phase A3:** Connection Health & Resilience _(0/4 tasks completed)_
+- [ ] **Phase A2:** WebSocket Client & Subscriptions _(ON HOLD)_ 🚧
+- [ ] **Phase A3:** Solana Service & Health (Minimal) _(0/3 tasks completed)_
 - [ ] **Phase A4:** Integration & Performance Validation _(0/3 tasks completed)_
 
-**Block A Status:** 🟡 In Progress _(Phase A1 complete: 14/43 subtasks | 1/4 phases complete)_
+**Block A Status:** 🟡 In Progress _(Phase A1 complete, A2 on hold | 1/3 active phases complete)_
 
 ### **Phase A1: Foundation & HTTP Client** _(Independent - 3-4 hours)_
 
@@ -71,107 +71,72 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 - [x] Configuration validates required parameters
 - [x] Proper error wrapping and context handling
 
-### **Phase A2: WebSocket Client & Subscriptions** _(Independent - 3-4 hours)_
+### **Phase A2: WebSocket Client & Subscriptions** _(ON HOLD - 3-4 hours)_ 🚧
 
-**Deliverables:**
+> **Status:** Deferred in favor of HTTP-first MVP approach. Will implement after core business logic (Blocks B + C) is working.
+
+**Planned Deliverables:**
 
 - [ ] WebSocket client with subscription management
 - [ ] Account and logs subscription methods
 - [ ] Message parsing and routing
 - [ ] Comprehensive test suite with mock WebSocket server
 
-**Components:**
+**Rationale for Deferral:**
 
-- [ ] `websocket.go` - WebSocket client implementation
-- [ ] `websocket_test.go` - WebSocket tests with mock server
-- [ ] `subscription.go` - Subscription lifecycle management
-- [ ] `subscription_test.go` - Subscription tests
-- [ ] `mock_server_test.go` - Test helper for WebSocket mocking
+- Focus on core functionality first (wallet balances, price engine)
+- Validate business logic before adding real-time complexity
+- HTTP polling can provide near real-time updates for MVP
+- Simpler deployment and testing without WebSocket dependencies
 
-**Implementation Tasks:**
+### **Phase A3: Solana Service & Health (Minimal)** _(Depends on A1 only - 1-2 hours)_
 
-1. **WebSocket Foundation** (1.5 hours)
-
-   - [ ] Basic WebSocket connection with `nhooyr.io/websocket`
-   - [ ] JSON-RPC message sending/receiving over WebSocket
-   - [ ] Proper context handling and graceful shutdown
-
-2. **Subscription Management** (1.5 hours)
-
-   - [ ] `AccountSubscribe(ctx, address, commitment)` → subscription ID
-   - [ ] `LogsSubscribe(ctx, mentions, commitment)` → subscription ID
-   - [ ] `Unsubscribe(ctx, subscriptionId)` → confirmation
-   - [ ] Track active subscriptions in memory map
-
-3. **Message Handling** (1 hour)
-
-   - [ ] Parse incoming subscription messages
-   - [ ] Route messages to appropriate channels based on subscription ID
-   - [ ] Handle subscription confirmations vs. data messages
-   - [ ] Buffer messages to prevent blocking
-
-4. **Testing** (1 hour)
-   - [ ] Mock WebSocket server for testing
-   - [ ] Test subscription lifecycle (subscribe → receive → unsubscribe)
-   - [ ] Test message parsing and routing
-   - [ ] Test concurrent subscriptions
-
-**Acceptance Criteria:**
-
-- [ ] Successfully subscribes to account changes
-- [ ] Successfully subscribes to program logs
-- [ ] Messages route correctly to subscribers
-- [ ] Subscription cleanup works properly
-- [ ] Tests achieve >90% coverage
-
-### **Phase A3: Connection Health & Resilience** _(Depends on A1 + A2 - 2-3 hours)_
+> **Scope:** HTTP-only service bootstrap and health monitoring. Simplified from original A3 due to A2 deferral.
 
 **Deliverables:**
 
-- [ ] Connection health monitoring
-- [ ] Auto-reconnection with exponential backoff
-- [ ] Subscription recovery after reconnection
-- [ ] Health check endpoint readiness
+- [ ] Solana service bootstrap and lifecycle management
+- [ ] HTTP-only health monitoring and status
+- [ ] Health check endpoints for production readiness
+- [ ] Service integration in server.go
 
 **Components:**
 
-- [ ] `manager.go` - Connection manager and health monitoring
-- [ ] `manager_test.go` - Manager tests with connection simulation
-- [ ] `health.go` - Health check logic
-- [ ] `reconnect.go` - Reconnection logic with backoff
+- [ ] `service.go` - Solana service with HTTP client lifecycle
+- [ ] `service_test.go` - Service tests with health scenarios
+- [ ] `health.go` - Health status types and monitoring logic
 
 **Implementation Tasks:**
 
-1. **Health Monitoring** (1 hour)
+1. **Service Bootstrap** (45 min)
+
+   - [ ] Create `Service` struct managing HTTP client lifecycle
+   - [ ] Implement `NewService(config)` with validation
+   - [ ] Add `GetHTTPClient()` access method
+   - [ ] Graceful shutdown with `Close()` method
+
+2. **Health Monitoring** (45 min)
 
    - [ ] Track HTTP client health (last successful request)
-   - [ ] Track WebSocket health (connection state, last message)
-   - [ ] Implement health check method for external probing
+   - [ ] Implement `Health(ctx)` method for external probing
+   - [ ] Health status struct with timestamps and error tracking
+   - [ ] Integration with server health endpoints
 
-2. **Reconnection Logic** (1 hour)
+3. **Server Integration** (30 min)
 
-   - [ ] Exponential backoff with jitter (1s → 2s → 4s → max 30s)
-   - [ ] Automatic WebSocket reconnection on disconnect
-   - [ ] Re-establish all active subscriptions after reconnect
-
-3. **Connection Manager** (30 min)
-
-   - [ ] Unified interface combining HTTP and WebSocket clients
-   - [ ] Coordinate health status across both clients
-   - [ ] Graceful shutdown handling
-
-4. **Testing** (30 min)
-   - [ ] Test reconnection scenarios with simulated disconnects
-   - [ ] Test subscription recovery after reconnection
-   - [ ] Test health monitoring accuracy
+   - [ ] Bootstrap Solana service in `server.go`
+   - [ ] Add health routes: `/health` and `/health/ready`
+   - [ ] Environment configuration loading
+   - [ ] Dependency injection pattern
 
 **Acceptance Criteria:**
 
-- [ ] Auto-reconnects within 30s of disconnect
-- [ ] All subscriptions restore after reconnection
-- [ ] Health checks accurately reflect connection status
-- [ ] No subscription message loss during normal operation
+- [ ] Solana service bootstraps successfully from config
+- [ ] Health checks accurately reflect HTTP connection status
+- [ ] Health endpoints return proper HTTP status codes
+- [ ] Service integrates cleanly with existing server structure
 - [ ] Graceful shutdown completes within 5s
+- [ ] Tests achieve >90% coverage
 
 ### **Phase A4: Integration & Performance Validation** _(Depends on A1-A3 - 1-2 hours)_
 
@@ -219,16 +184,17 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 ### **Dependencies & Phase Relationships**
 
 ```
-A1 (HTTP Client) ──┐
-                   ├──► A3 (Health & Resilience) ──► A4 (Integration)
-A2 (WebSocket) ────┘
+A1 (HTTP Client) ──► A3 (Service & Health - Minimal) ──► A4 (Integration) ──► B (Tokens) ──► C (Price Engine)
+                │
+                └──► A2 (WebSocket) [ON HOLD] 🚧
 ```
 
 **Phase Independence:**
 
-- **A1 & A2** can be developed in parallel by different developers
-- **A3** requires both A1 & A2 interfaces but can mock them for initial testing
-- **A4** validates the complete system works together
+- **A3 (Minimal)** depends only on A1, much simpler scope
+- **A2** deferred until after core business logic (Blocks B + C)
+- **A4** simplified to HTTP-only integration testing
+- **Block B & C** can begin after A3 completion
 
 **Testing Strategy:**
 
@@ -241,20 +207,20 @@ A2 (WebSocket) ────┘
 
 ### **Block A Completion Checklist**
 
-**Files Created:** _(Total: 19 files)_
+**Files Created:** _(Total revised: 16 files for Block A)_
 
 - [x] **A1: 10 files** ✅
   - [x] `config.go`, `types.go`, `errors.go`
   - [x] `http_client.go`, `http_client_test.go`
   - [x] 5 testdata JSON files (mock responses)
-- [ ] **A2: 5 files** (websocket + tests, subscription + tests, mock_server_test)
-- [ ] **A3: 4 files** (manager + tests, health, reconnect)
-- [ ] **A4: 4 files** (integration_test, benchmark_test, example_test, README)
+- [ ] **A2: 5 files** _(ON HOLD)_ 🚧
+- [ ] **A3: 3 files** (service + tests, health)
+- [ ] **A4: 3 files** (integration_test, benchmark_test, example_test)
 
 **Key Milestones:**
 
 - [x] **A1 Complete:** HTTP client ready with >90% test coverage ✅
-- [ ] **A2 Complete:** WebSocket subscriptions working with >90% test coverage
-- [ ] **A3 Complete:** Auto-reconnection and health monitoring operational
-- [ ] **A4 Complete:** Integration tests pass, performance benchmarks meet targets
-- [ ] **Block A Done:** All 19 files created, ready for Block B integration
+- [ ] **A2 Deferred:** WebSocket subscriptions (implement after Blocks B + C) 🚧
+- [ ] **A3 Complete:** Solana service bootstrap and health monitoring (HTTP-only)
+- [ ] **A4 Complete:** HTTP integration tests pass, benchmarks meet targets
+- [ ] **Block A Done:** Core connectivity ready, proceed to Block B (Tokens & Balances)
