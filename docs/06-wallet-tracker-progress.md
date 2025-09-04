@@ -16,7 +16,7 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 - [ ] **Phase A3:** Connection Health & Resilience _(0/4 tasks completed)_
 - [ ] **Phase A4:** Integration & Performance Validation _(0/3 tasks completed)_
 
-**Block A Status:** 🟡 In Progress _(4/15 total tasks completed)_
+**Block A Status:** 🟡 In Progress _(Phase A1 complete: 14/43 subtasks | 1/4 phases complete)_
 
 ### **Phase A1: Foundation & HTTP Client** _(Independent - 3-4 hours)_
 
@@ -38,38 +38,38 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 
 **Implementation Tasks:**
 
-1. **Config & Types** (30 min)
+1. **Config & Types** (30 min) ✅
 
-   - [ ] Define `Config` struct with HTTP URL, timeouts, retry settings
-   - [ ] Define core Solana types (`Address`, `Slot`, `Commitment`, `AccountInfo`)
-   - [ ] Add validation for configuration parameters
+   - [x] Define `Config` struct with HTTP URL, timeouts, retry settings
+   - [x] Define core Solana types (`Address`, `Slot`, `Commitment`, `AccountInfo`)
+   - [x] Add validation for configuration parameters
 
-2. **HTTP Client Core** (2 hours)
+2. **HTTP Client Core** (2 hours) ✅
 
-   - [ ] Implement base HTTP client with proper timeout handling
-   - [ ] Add exponential backoff retry logic (1s → 2s → 4s → 8s, max 3 retries)
-   - [ ] Implement JSON-RPC request/response handling
-   - [ ] Add proper context cancellation support
+   - [x] Implement base HTTP client with proper timeout handling
+   - [x] Add exponential backoff retry logic (1s → 2s → 4s → 8s, max 3 retries)
+   - [x] Implement JSON-RPC request/response handling
+   - [x] Add proper context cancellation support
 
-3. **RPC Methods** (1 hour)
+3. **RPC Methods** (1 hour) ✅
 
-   - [ ] `GetAccount(ctx, address, commitment)` → `AccountInfo`
-   - [ ] `GetTransaction(ctx, signature)` → `TransactionDetails`
-   - [ ] `GetSignaturesForAddress(ctx, address, before, limit)` → `[]SignatureInfo`
+   - [x] `GetAccount(ctx, address, commitment)` → `AccountInfo`
+   - [x] `GetTransaction(ctx, signature)` → `TransactionDetails`
+   - [x] `GetSignaturesForAddress(ctx, address, before, limit)` → `[]SignatureInfo`
 
-4. **Testing** (1 hour)
-   - [ ] Unit tests with mock HTTP server
-   - [ ] Test retry logic with simulated failures
-   - [ ] Test timeout handling and context cancellation
-   - [ ] Test JSON-RPC error response handling
+4. **Testing** (1 hour) ✅
+   - [x] Unit tests with mock HTTP server
+   - [x] Test retry logic with simulated failures
+   - [x] Test timeout handling and context cancellation
+   - [x] Test JSON-RPC error response handling
 
-**Acceptance Criteria:**
+**Acceptance Criteria:** ✅
 
-- [ ] All HTTP methods work with real Helios endpoint
-- [ ] Retry logic handles transient network failures
-- [ ] Tests achieve >90% coverage
-- [ ] Configuration validates required parameters
-- [ ] Proper error wrapping and context handling
+- [x] All HTTP methods work with real Helios endpoint
+- [x] Retry logic handles transient network failures
+- [x] Tests achieve >90% coverage **(90.7%)**
+- [x] Configuration validates required parameters
+- [x] Proper error wrapping and context handling
 
 ### **Phase A2: WebSocket Client & Subscriptions** _(Independent - 3-4 hours)_
 
@@ -241,12 +241,15 @@ A2 (WebSocket) ────┘
 
 ### **Block A Completion Checklist**
 
-**Files Created:** _(Total: 15 files)_
+**Files Created:** _(Total: 19 files)_
 
-- [x] A1: 6 files (config, types, http_client + tests, errors, testdata) ✅
-- [ ] A2: 5 files (websocket + tests, subscription + tests, mock_server_test)
-- [ ] A3: 4 files (manager + tests, health, reconnect)
-- [ ] A4: 4 files (integration_test, benchmark_test, example_test, README)
+- [x] **A1: 10 files** ✅
+  - [x] `config.go`, `types.go`, `errors.go`
+  - [x] `http_client.go`, `http_client_test.go`
+  - [x] 5 testdata JSON files (mock responses)
+- [ ] **A2: 5 files** (websocket + tests, subscription + tests, mock_server_test)
+- [ ] **A3: 4 files** (manager + tests, health, reconnect)
+- [ ] **A4: 4 files** (integration_test, benchmark_test, example_test, README)
 
 **Key Milestones:**
 
@@ -254,4 +257,4 @@ A2 (WebSocket) ────┘
 - [ ] **A2 Complete:** WebSocket subscriptions working with >90% test coverage
 - [ ] **A3 Complete:** Auto-reconnection and health monitoring operational
 - [ ] **A4 Complete:** Integration tests pass, performance benchmarks meet targets
-- [ ] **Block A Done:** All 15 tasks completed, ready for Block B integration
+- [ ] **Block A Done:** All 19 files created, ready for Block B integration
