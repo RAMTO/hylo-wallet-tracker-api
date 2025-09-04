@@ -1,53 +1,45 @@
-# Project hylo-wallet-tracker-api
+# Hylo Wallet Tracker API
 
-One Paragraph of project description goes here
+Read-only REST API for tracking Solana wallet activity and metrics for the Hylo protocol. Provides real-time wallet balances (hyUSD, sHYUSD, xSOL), price data (SOL/USD, xSOL pricing), and transaction history.
 
-## Getting Started
+## Quick Start
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+1. **Set up environment variables:**
 
-## MakeFile
-
-Run build make command with tests
 ```bash
-make all
+cp .env.example .env
+# Edit .env with your Helios RPC endpoints
 ```
 
-Build the application
-```bash
-make build
-```
+2. **Run the API:**
 
-Run the application
 ```bash
 make run
-```
-Create DB container
-```bash
-make docker-run
+# Or: go run ./cmd/api/main.go
 ```
 
-Shutdown DB Container
+3. **Check health:**
+
 ```bash
-make docker-down
+curl http://localhost:8080/health
 ```
 
-DB Integrations Test:
+## Environment Variables
+
 ```bash
-make itest
+PORT=8080
+RPC_HTTP_URL=https://mainnet.helius-rpc.com
+RPC_WS_URL=wss://mainnet.helius-rpc.com
 ```
 
-Live reload the application:
-```bash
-make watch
-```
+## API Endpoints
 
-Run the test suite:
-```bash
-make test
-```
+- `GET /health` - Service health and Solana RPC connectivity status
 
-Clean up binary from the last build:
+## Development
+
 ```bash
-make clean
+make test    # Run tests
+make build   # Build binary
+make clean   # Clean artifacts
 ```
