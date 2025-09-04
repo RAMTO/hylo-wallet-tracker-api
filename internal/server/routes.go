@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -20,5 +21,28 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
+	// Health endpoint
+	r.Get("/health", s.handleHealth)
+
 	return r
+}
+
+// handleHealth returns basic liveness status
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	status := s.solanaService.Health(r.Context())
+
+	response := map[string]interface{}{
+		"status": "ok",
+		"solana": status,
+	}
+
+	// Return 503 if Solana connection is unhealthy
+	if !status.IsHealthy() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		response["status"] = "unhealthy"
+	}
+
+	json.NewEncoder(w).Encode(response)
 }

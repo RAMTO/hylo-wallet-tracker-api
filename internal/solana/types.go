@@ -71,18 +71,46 @@ type AccountInfo struct {
 	RentEpoch  uint64 `json:"rentEpoch"`
 }
 
-// UnmarshalJSON handles the custom data field decoding
+// UnmarshalJSON handles the custom data field decoding and large numbers
 func (ai *AccountInfo) UnmarshalJSON(data []byte) error {
-	type Alias AccountInfo
-	aux := &struct {
-		Data interface{} `json:"data"`
-		*Alias
-	}{
-		Alias: (*Alias)(ai),
-	}
+	// Use a temporary struct to handle all fields properly
+	aux := struct {
+		Lamports   uint64      `json:"lamports"`
+		Data       interface{} `json:"data"`
+		Owner      string      `json:"owner"`
+		Executable bool        `json:"executable"`
+		RentEpoch  interface{} `json:"rentEpoch"` // Handle as interface for large numbers
+	}{}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
+	}
+
+	// Set the simple fields
+	ai.Lamports = aux.Lamports
+	ai.Owner = aux.Owner
+	ai.Executable = aux.Executable
+
+	// Handle RentEpoch - safely convert large numbers
+	switch v := aux.RentEpoch.(type) {
+	case float64:
+		// For very large numbers that exceed uint64, cap at MaxUint64
+		if v > 9223372036854775807 { // MaxInt64, close to MaxUint64
+			ai.RentEpoch = 18446744073709551615 // MaxUint64
+		} else {
+			ai.RentEpoch = uint64(v)
+		}
+	case int64:
+		ai.RentEpoch = uint64(v)
+	case string:
+		// Try to parse string as uint64, fallback to 0
+		if parsed, err := json.Number(v).Int64(); err == nil {
+			ai.RentEpoch = uint64(parsed)
+		} else {
+			ai.RentEpoch = 0
+		}
+	default:
+		ai.RentEpoch = 0 // Safe fallback
 	}
 
 	// Handle data field which can be array or base64 string
