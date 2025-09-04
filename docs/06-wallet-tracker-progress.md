@@ -14,9 +14,9 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 - [x] **Phase A1:** Foundation & HTTP Client _(4/4 tasks completed)_ ✅
 - [ ] **Phase A2:** WebSocket Client & Subscriptions _(ON HOLD)_ 🚧
 - [x] **Phase A3:** Solana Service & Health (Minimal) _(3/3 tasks completed)_ ✅
-- [ ] **Phase A4:** Integration & Performance Validation _(0/3 tasks completed)_
+- [x] **Phase A4:** Integration & Performance Validation _(SKIPPED - MVP approach)_ 🟢
 
-**Block A Status:** 🟡 In Progress _(Phases A1+A3 complete, A2 on hold | 2/3 active phases complete)_
+**Block A Status:** ✅ Complete _(Core HTTP connectivity ready for Block B)_
 
 ### **Phase A1: Foundation & HTTP Client** _(Independent - 3-4 hours)_
 
@@ -138,63 +138,43 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 - [x] Graceful shutdown completes within 5s ✅
 - [x] Tests achieve >80% coverage **(82.8%)** ✅
 
-### **Phase A4: Integration & Performance Validation** _(Depends on A1-A3 - 1-2 hours)_
+### **Phase A4: Integration & Performance Validation** _(SKIPPED - MVP approach)_ 🟢
 
-**Deliverables:**
+> **Status:** Skipped in favor of MVP-first approach. HTTP connectivity is proven through comprehensive unit tests (90.7% coverage) and will be validated during Block B development.
 
-- [ ] End-to-end integration tests against real Helios
-- [ ] Performance benchmarks and load testing
-- [ ] Usage documentation and examples
-- [ ] Production readiness validation
+**Rationale for Skipping:**
 
-**Components:**
+- **Strong unit test coverage**: 90.7% with comprehensive scenarios including mocks, retries, timeouts
+- **MVP prioritization**: Focus on business logic (Blocks B+C) before extensive integration testing
+- **Real-world validation**: Block B development will provide natural integration testing
+- **Production gradual rollout**: Integration testing can happen during alpha deployment
+- **Resource efficiency**: Avoid over-engineering connectivity layer before proving business value
 
-- [ ] `integration_test.go` - End-to-end tests against real Helios
-- [ ] `benchmark_test.go` - Performance benchmarks
-- [ ] `example_test.go` - Usage examples
-- [ ] `README.md` - Component documentation
+**Deferred Deliverables** _(for future consideration)_:
 
-**Implementation Tasks:**
+- Integration tests against real Helios mainnet (can be added post-MVP if needed)
+- Performance benchmarks and load testing (validate during production traffic)
+- Extended usage documentation (current unit tests + README sufficient)
+- Comprehensive production readiness validation (gradual rollout approach)
 
-1. **Integration Testing** (45 min)
-
-   - [ ] Test against real Helios mainnet endpoint
-   - [ ] Verify all methods work with production data
-   - [ ] Test with reference wallet: `A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g`
-
-2. **Performance Testing** (30 min)
-
-   - [ ] Benchmark HTTP request latency (target <2s P95)
-   - [ ] Benchmark WebSocket subscription throughput
-   - [ ] Test concurrent subscription handling (10+ subscriptions)
-
-3. **Documentation** (15 min)
-   - [ ] Usage examples for each major function
-   - [ ] Configuration documentation with environment variables
-   - [ ] Error handling guidelines and common patterns
-
-**Acceptance Criteria:**
-
-- [ ] Integration tests pass against real Helios mainnet
-- [ ] HTTP requests complete <2s P95
-- [ ] WebSocket supports 10+ concurrent subscriptions
-- [ ] Documentation covers all public methods
-- [ ] Example code demonstrates typical usage patterns
+**Decision:** HTTP connectivity layer is **sufficiently validated** through unit tests and ready for Block B integration. Real-world validation will occur naturally during Block B development.
 
 ### **Dependencies & Phase Relationships**
 
 ```
-A1 (HTTP Client) ──► A3 (Service & Health - Minimal) ──► A4 (Integration) ──► B (Tokens) ──► C (Price Engine)
+A1 (HTTP Client) ──► A3 (Service & Health - Minimal) ──► B (Tokens) ──► C (Price Engine)
                 │
                 └──► A2 (WebSocket) [ON HOLD] 🚧
+                │
+                └──► A4 (Integration) [SKIPPED] 🟢
 ```
 
 **Phase Independence:**
 
 - **A3 (Minimal)** depends only on A1, much simpler scope
 - **A2** deferred until after core business logic (Blocks B + C)
-- **A4** simplified to HTTP-only integration testing
-- **Block B & C** can begin after A3 completion
+- **A4** skipped for MVP approach - unit tests provide sufficient validation
+- **Block B & C** can begin immediately - HTTP connectivity is ready
 
 **Testing Strategy:**
 
@@ -215,12 +195,12 @@ A1 (HTTP Client) ──► A3 (Service & Health - Minimal) ──► A4 (Integra
   - [x] 5 testdata JSON files (mock responses)
 - [ ] **A2: 5 files** _(ON HOLD)_ 🚧
 - [x] **A3: 3 files** (service + tests, health) ✅
-- [ ] **A4: 3 files** (integration_test, benchmark_test, example_test)
+- [x] **A4: Skipped** (deferred for MVP) 🟢
 
 **Key Milestones:**
 
 - [x] **A1 Complete:** HTTP client ready with >90% test coverage ✅
 - [ ] **A2 Deferred:** WebSocket subscriptions (implement after Blocks B + C) 🚧
 - [x] **A3 Complete:** Solana service bootstrap and health monitoring (HTTP-only) ✅
-- [ ] **A4 Complete:** HTTP integration tests pass, benchmarks meet targets
-- [ ] **Block A Done:** Core connectivity ready, proceed to Block B (Tokens & Balances)
+- [x] **A4 Skipped:** Integration testing deferred for MVP approach 🟢
+- [x] **Block A Done:** Core connectivity ready, proceed to Block B (Tokens & Balances) ✅
