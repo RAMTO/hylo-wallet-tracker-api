@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params: invalid length 1, expected a (both, T), (only, T) or (none, ()), or (ignored_any_value, ()), or (compact, T).",
+    "data": {
+      "logs": null
+    }
+  },
+  "id": 1
+}

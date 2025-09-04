@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 294112233
+    },
+    "value": null
+  },
+  "id": 1
+}

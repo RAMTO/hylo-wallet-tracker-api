@@ -11,30 +11,30 @@ Establishes core Solana RPC connectivity layer using Helios, providing both HTTP
 
 ### **Overall Progress**
 
-- [ ] **Phase A1:** Foundation & HTTP Client _(0/4 tasks completed)_
+- [x] **Phase A1:** Foundation & HTTP Client _(4/4 tasks completed)_ ✅
 - [ ] **Phase A2:** WebSocket Client & Subscriptions _(0/4 tasks completed)_
 - [ ] **Phase A3:** Connection Health & Resilience _(0/4 tasks completed)_
 - [ ] **Phase A4:** Integration & Performance Validation _(0/3 tasks completed)_
 
-**Block A Status:** 🔴 Not Started _(0/15 total tasks completed)_
+**Block A Status:** 🟡 In Progress _(4/15 total tasks completed)_
 
 ### **Phase A1: Foundation & HTTP Client** _(Independent - 3-4 hours)_
 
 **Deliverables:**
 
-- [ ] Basic project structure with `/internal/solana`
-- [ ] HTTP client with retry logic and timeout handling
-- [ ] Core RPC methods: `GetAccount`, `GetTransaction`, `GetSignaturesForAddress`
-- [ ] Comprehensive test suite
+- [x] Basic project structure with `/internal/solana`
+- [x] HTTP client with retry logic and timeout handling
+- [x] Core RPC methods: `GetAccount`, `GetTransaction`, `GetSignaturesForAddress`
+- [x] Comprehensive test suite
 
 **Components:**
 
-- [ ] `config.go` - Configuration struct and validation
-- [ ] `types.go` - Solana-specific types (Address, Slot, Commitment)
-- [ ] `http_client.go` - HTTP client implementation
-- [ ] `http_client_test.go` - HTTP client tests
-- [ ] `errors.go` - Custom error types and wrapping
-- [ ] `testdata/` - Mock JSON responses for tests
+- [x] `config.go` - Configuration struct and validation
+- [x] `types.go` - Solana-specific types (Address, Slot, Commitment)
+- [x] `http_client.go` - HTTP client implementation
+- [x] `http_client_test.go` - HTTP client tests
+- [x] `errors.go` - Custom error types and wrapping
+- [x] `testdata/` - Mock JSON responses for tests
 
 **Implementation Tasks:**
 
@@ -243,14 +243,14 @@ A2 (WebSocket) ────┘
 
 **Files Created:** _(Total: 15 files)_
 
-- [ ] A1: 6 files (config, types, http_client + tests, errors, testdata)
+- [x] A1: 6 files (config, types, http_client + tests, errors, testdata) ✅
 - [ ] A2: 5 files (websocket + tests, subscription + tests, mock_server_test)
 - [ ] A3: 4 files (manager + tests, health, reconnect)
 - [ ] A4: 4 files (integration_test, benchmark_test, example_test, README)
 
 **Key Milestones:**
 
-- [ ] **A1 Complete:** HTTP client ready with >90% test coverage
+- [x] **A1 Complete:** HTTP client ready with >90% test coverage ✅
 - [ ] **A2 Complete:** WebSocket subscriptions working with >90% test coverage
 - [ ] **A3 Complete:** Auto-reconnection and health monitoring operational
 - [ ] **A4 Complete:** Integration tests pass, performance benchmarks meet targets

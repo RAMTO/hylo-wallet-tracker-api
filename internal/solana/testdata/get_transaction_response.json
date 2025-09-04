@@ -1,0 +1,37 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "blockTime": 1694019123,
+    "meta": {
+      "err": null,
+      "fee": 5000,
+      "logMessages": [
+        "Program 11111111111111111111111111111111 invoke [1]",
+        "Program 11111111111111111111111111111111 success"
+      ],
+      "preBalances": [1000000000, 0],
+      "postBalances": [999995000, 0]
+    },
+    "slot": 294112233,
+    "transaction": {
+      "message": {
+        "accountKeys": [
+          "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "11111111111111111111111111111111"
+        ],
+        "instructions": [
+          {
+            "accounts": [0, 1],
+            "data": "3Bxs4h24hBtQy9rw",
+            "programIdIndex": 1
+          }
+        ],
+        "recentBlockhash": "FwRYtTPRk5N4wUeP87rTw9kQVSwigB6kbikGzzeCMrW5"
+      },
+      "signatures": [
+        "5VWF2BTGZGS9c8uJ8ZmKGZwxAAaG5Wnr4drcmA8zbHEKkArDhYBm2HjRN1QAK1EzQ8sKvQw9GsJJ6sJ4x7q3LQg9"
+      ]
+    }
+  },
+  "id": 1
+}

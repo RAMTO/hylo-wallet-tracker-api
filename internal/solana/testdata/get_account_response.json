@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 294112233
+    },
+    "value": {
+      "data": ["dGVzdCBkYXRh", "base64"],
+      "executable": false,
+      "lamports": 1000000000,
+      "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "rentEpoch": 361
+    }
+  },
+  "id": 1
+}
