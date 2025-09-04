@@ -1,0 +1,1185 @@
+Directory structure:
+└── hylo-so-sdk/
+    ├── Cargo.toml
+    ├── flake.lock
+    ├── flake.nix
+    ├── rustfmt.toml
+    ├── .envrc
+    ├── src/
+    │   ├── exchange_client.rs
+    │   ├── lib.rs
+    │   ├── pda.rs
+    │   ├── stability_pool_client.rs
+    │   └── util.rs
+    └── .github/
+        └── workflows/
+            └── ci.yml
+
+================================================
+FILE: Cargo.toml
+================================================
+[package]
+name = "hylo-sdk"
+version = "0.1.11"
+edition = "2021"
+description = "Rust SDK for the Hylo stablecoin protocol"
+license = "MPL-2.0"
+homepage = "https://hylo.so"
+include = ["idls/", "src/"]
+
+[dependencies]
+anyhow = "1.0.98"
+anchor-client = { version = "0.31.1", features = ["async"] }
+anchor-spl = "0.31.1"
+anchor-lang = "0.31.1"
+hylo-fix = "0.4.0"
+pyth-solana-receiver-sdk = "0.6.1"
+base64 = "0.22.1"
+serde_json = "1.0.140"
+tokio = "1.36.0"
+async-trait = "0.1.88"
+futures = "0.3.31"
+itertools = "0.14.0"
+
+
+
+================================================
+FILE: flake.lock
+================================================
+{
+  "nodes": {
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1712014858,
+        "narHash": "sha256-sB4SWl2lX95bExY2gMFG5HIzvva5AVMJd4Igm+GpZNw=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "9126214d0a59633752a136528f5f3b9aa8565b7d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "9126214d0a59633752a136528f5f3b9aa8565b7d",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1745109748,
+        "narHash": "sha256-4V/t5GYrB9Rj0QK8PmSA7z5DAFfAVD5MyMg4oBI6Iyc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "27fd171e9a51865e9b445c5583d1a1e06235efb2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "27fd171e9a51865e9b445c5583d1a1e06235efb2",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib": {
+      "locked": {
+        "dir": "lib",
+        "lastModified": 1711703276,
+        "narHash": "sha256-iMUFArF0WCatKK6RzfUJknjem0H9m4KgorO/p3Dopkk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d8fe5e6c92d0d190646fb9f1056741a229980089",
+        "type": "github"
+      },
+      "original": {
+        "dir": "lib",
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1744536153,
+        "narHash": "sha256-awS2zRgF4uTwrOKwwiJcByDzDOdo3Q1rPZbiHQg/N38=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "18dd725c29603f582cf1900e0d25f9f1063dbf11",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": "nixpkgs",
+        "rust-overlay": "rust-overlay"
+      }
+    },
+    "rust-overlay": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1752547600,
+        "narHash": "sha256-0vUE42ji4mcCvQO8CI0Oy8LmC6u2G4qpYldZbZ26MLc=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "9127ca1f5a785b23a2fc1c74551a27d3e8b9a28b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "9127ca1f5a785b23a2fc1c74551a27d3e8b9a28b",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
+
+
+
+================================================
+FILE: flake.nix
+================================================
+{
+  description = "Solana dev environment for Hylo protocol";
+  inputs = {
+    nixpkgs.url =
+      "github:NixOS/nixpkgs/27fd171e9a51865e9b445c5583d1a1e06235efb2";
+    flake-parts.url =
+      "github:hercules-ci/flake-parts/9126214d0a59633752a136528f5f3b9aa8565b7d";
+    rust-overlay.url =
+      "github:oxalica/rust-overlay/9127ca1f5a785b23a2fc1c74551a27d3e8b9a28b";
+  };
+  outputs = inputs@{ self, nixpkgs, flake-parts, rust-overlay }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems =
+        [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ];
+      perSystem = { config, self', inputs', pkgs, system, ... }:
+        with import nixpkgs {
+          inherit system;
+          overlays = [ rust-overlay.overlays.default ];
+        };
+        let
+          sharedBuildInputs = [ libiconv pkg-config gcc openssl ]
+            ++ lib.optionals stdenv.isDarwin
+            (with darwin.apple_sdk.frameworks; [
+              System
+              Security
+              SystemConfiguration
+              CoreFoundation
+              CoreServices
+              Foundation
+            ]);
+        in {
+          devShells.nightly = mkShell {
+            packages =
+              [ rust-bin.nightly.latest.default ];
+            buildInputs = sharedBuildInputs;
+          };
+          devShells.default = mkShell {
+            packages = [ rust-bin.stable."1.88.0".default ]
+              ++ lib.optionals stdenv.isDarwin [ rust-analyzer ];
+            buildInputs = sharedBuildInputs;
+          };
+        };
+    };
+}
+
+
+
+================================================
+FILE: rustfmt.toml
+================================================
+tab_spaces = 2
+max_width = 80
+imports_granularity = "Module"
+format_strings = true
+wrap_comments = true
+comment_width = 80
+
+
+
+================================================
+FILE: .envrc
+================================================
+use flake .
+
+
+
+================================================
+FILE: src/exchange_client.rs
+================================================
+use crate::exchange::client::{accounts, args};
+use crate::exchange::events::ExchangeStats;
+use crate::exchange::types::SlippageConfig;
+use crate::util::{
+  simulation_config, ProgramClient, EXCHANGE_LOOKUP_TABLE,
+  LST_REGISTRY_LOOKUP_TABLE, SOL_USD_PYTH_FEED,
+};
+use crate::{exchange, pda, stability_pool};
+
+use std::sync::Arc;
+
+use anchor_client::solana_sdk::address_lookup_table::program::ID as LOOKUP_TABLE_PROGRAM;
+use anchor_client::solana_sdk::pubkey::Pubkey;
+use anchor_client::solana_sdk::signature::{Keypair, Signature};
+use anchor_client::Program;
+use anchor_lang::{system_program, AnchorDeserialize};
+use anchor_spl::{associated_token, token};
+use anyhow::{anyhow, Result};
+use base64::prelude::{Engine, BASE64_STANDARD};
+use fix::prelude::*;
+
+pub struct ExchangeClient {
+  program: Program<Arc<Keypair>>,
+  keypair: Arc<Keypair>,
+}
+
+impl ProgramClient for ExchangeClient {
+  const PROGRAM_ID: Pubkey = exchange::ID;
+
+  fn build_client(
+    program: Program<Arc<Keypair>>,
+    keypair: Arc<Keypair>,
+  ) -> ExchangeClient {
+    ExchangeClient { program, keypair }
+  }
+
+  fn program(&self) -> &Program<Arc<Keypair>> {
+    &self.program
+  }
+
+  fn keypair(&self) -> Arc<Keypair> {
+    self.keypair.clone()
+  }
+}
+
+impl ExchangeClient {
+  /// Mints stablecoin against the given LST.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn mint_stablecoin(
+    &self,
+    amount_lst: UFix64<N9>,
+    lst_mint: Pubkey,
+    user: Pubkey,
+    slippage_config: Option<SlippageConfig>,
+  ) -> Result<Signature> {
+    let accounts = accounts::MintStablecoin {
+      user,
+      hylo: pda::hylo(),
+      fee_auth: pda::fee_auth(lst_mint),
+      vault_auth: pda::vault_auth(lst_mint),
+      stablecoin_auth: pda::hyusd_auth(),
+      fee_vault: pda::fee_vault(lst_mint),
+      lst_vault: pda::vault(lst_mint),
+      lst_header: pda::lst_header(lst_mint),
+      user_lst_ata: pda::ata(user, lst_mint),
+      user_stablecoin_ata: pda::ata(user, pda::hyusd()),
+      lst_mint,
+      stablecoin_mint: pda::hyusd(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      token_program: token::ID,
+      associated_token_program: associated_token::ID,
+      system_program: system_program::ID,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::MintStablecoin {
+      amount_lst_to_deposit: amount_lst.bits,
+      slippage_config,
+    };
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        LST_REGISTRY_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Redeems stablecoin into the given LST.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn redeem_stablecoin(
+    &self,
+    amount_stablecoin: UFix64<N6>,
+    lst_mint: Pubkey,
+    user: Pubkey,
+    slippage_config: Option<SlippageConfig>,
+  ) -> Result<Signature> {
+    let accounts = accounts::RedeemStablecoin {
+      user,
+      hylo: pda::hylo(),
+      fee_auth: pda::fee_auth(lst_mint),
+      vault_auth: pda::vault_auth(lst_mint),
+      stablecoin_auth: pda::hyusd_auth(),
+      fee_vault: pda::fee_vault(lst_mint),
+      lst_vault: pda::vault(lst_mint),
+      lst_header: pda::lst_header(lst_mint),
+      user_stablecoin_ata: pda::ata(user, pda::hyusd()),
+      user_lst_ata: pda::ata(user, lst_mint),
+      stablecoin_mint: pda::hyusd(),
+      lst_mint,
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      system_program: system_program::ID,
+      token_program: token::ID,
+      associated_token_program: associated_token::ID,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::RedeemStablecoin {
+      amount_to_redeem: amount_stablecoin.bits,
+      slippage_config,
+    };
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        LST_REGISTRY_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Mints levercoin against the given LST.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn mint_levercoin(
+    &self,
+    amount_lst: UFix64<N9>,
+    lst_mint: Pubkey,
+    user: Pubkey,
+    slippage_config: Option<SlippageConfig>,
+  ) -> Result<Signature> {
+    let accounts = accounts::MintLevercoin {
+      user,
+      hylo: pda::hylo(),
+      fee_auth: pda::fee_auth(lst_mint),
+      vault_auth: pda::vault_auth(lst_mint),
+      levercoin_auth: pda::xsol_auth(),
+      fee_vault: pda::fee_vault(lst_mint),
+      lst_vault: pda::vault(lst_mint),
+      lst_header: pda::lst_header(lst_mint),
+      user_lst_ata: pda::ata(user, lst_mint),
+      user_levercoin_ata: pda::ata(user, pda::xsol()),
+      lst_mint,
+      levercoin_mint: pda::xsol(),
+      stablecoin_mint: pda::hyusd(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      token_program: token::ID,
+      associated_token_program: associated_token::ID,
+      system_program: system_program::ID,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::MintLevercoin {
+      amount_lst_to_deposit: amount_lst.bits,
+      slippage_config,
+    };
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        LST_REGISTRY_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Redeems levercoin into the given LST.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn redeem_levercoin(
+    &self,
+    amount_levercoin: UFix64<N6>,
+    lst_mint: Pubkey,
+    user: Pubkey,
+    slippage_config: Option<SlippageConfig>,
+  ) -> Result<Signature> {
+    let accounts = accounts::RedeemLevercoin {
+      user,
+      hylo: pda::hylo(),
+      fee_auth: pda::fee_auth(lst_mint),
+      vault_auth: pda::vault_auth(lst_mint),
+      levercoin_auth: pda::xsol_auth(),
+      fee_vault: pda::fee_vault(lst_mint),
+      lst_vault: pda::vault(lst_mint),
+      lst_header: pda::lst_header(lst_mint),
+      user_levercoin_ata: pda::ata(user, pda::xsol()),
+      user_lst_ata: pda::ata(user, lst_mint),
+      levercoin_mint: pda::xsol(),
+      stablecoin_mint: pda::hyusd(),
+      lst_mint,
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      system_program: system_program::ID,
+      token_program: token::ID,
+      associated_token_program: associated_token::ID,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::RedeemLevercoin {
+      amount_to_redeem: amount_levercoin.bits,
+      slippage_config,
+    };
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        LST_REGISTRY_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Runs exchange's LST price oracle crank.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn update_lst_prices(&self) -> Result<Signature> {
+    let accounts = accounts::UpdateLstPrices {
+      payer: self.program.payer(),
+      hylo: pda::hylo(),
+      lst_registry: LST_REGISTRY_LOOKUP_TABLE,
+      lut_program: LOOKUP_TABLE_PROGRAM,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::UpdateLstPrices {};
+    let (remaining_accounts, registry_lut) = self.load_lst_registry().await?;
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .accounts(remaining_accounts)
+      .args(args)
+      .instructions()?;
+    let exchange_lut = self.load_lookup_table(&EXCHANGE_LOOKUP_TABLE).await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &[registry_lut, exchange_lut])
+      .await?;
+    Ok(sig)
+  }
+
+  /// Harvests yield from LST vaults to stability pool.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn harvest_yield(&self) -> Result<Signature> {
+    let accounts = accounts::HarvestYield {
+      payer: self.program.payer(),
+      hylo: pda::hylo(),
+      stablecoin_mint: pda::hyusd(),
+      stablecoin_auth: pda::hyusd_auth(),
+      levercoin_mint: pda::xsol(),
+      levercoin_auth: pda::xsol_auth(),
+      fee_auth: pda::fee_auth(pda::hyusd()),
+      fee_vault: pda::fee_vault(pda::hyusd()),
+      stablecoin_pool: pda::hyusd_pool(),
+      levercoin_pool: pda::xsol_pool(),
+      pool_auth: pda::pool_auth(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      hylo_stability_pool: stability_pool::ID,
+      lst_registry: LST_REGISTRY_LOOKUP_TABLE,
+      lut_program: LOOKUP_TABLE_PROGRAM,
+      associated_token_program: associated_token::ID,
+      token_program: token::ID,
+      system_program: system_program::ID,
+      event_authority: pda::event_auth(exchange::ID),
+      program: exchange::ID,
+    };
+    let args = args::HarvestYield {};
+    let (remaining_accounts, registry_lut) = self.load_lst_registry().await?;
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .accounts(remaining_accounts)
+      .args(args)
+      .instructions()?;
+    let exchange_lut = self.load_lookup_table(&EXCHANGE_LOOKUP_TABLE).await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &[registry_lut, exchange_lut])
+      .await?;
+    Ok(sig)
+  }
+
+  /// Simulates the `get_stats` instruction on the exchange.
+  ///
+  /// # Errors
+  /// - Simulation failure
+  /// - Return data access or deserialization
+  pub async fn simulate_get_stats(&self) -> Result<ExchangeStats> {
+    let accounts = accounts::GetStats {
+      hylo: pda::hylo(),
+      stablecoin_mint: pda::hyusd(),
+      levercoin_mint: pda::xsol(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+    };
+    let args = args::GetStats {};
+    let tx = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .signed_transaction()
+      .await?;
+    let rpc = self.program.rpc();
+    let result = rpc
+      .simulate_transaction_with_config(&tx, simulation_config())
+      .await?;
+    let (data, _) = result
+      .value
+      .return_data
+      .ok_or(anyhow!("No return data for `get_stats`"))?
+      .data;
+    let bytes = BASE64_STANDARD.decode(data)?;
+    let stats = ExchangeStats::try_from_slice(&bytes)?;
+    Ok(stats)
+  }
+}
+
+
+
+================================================
+FILE: src/lib.rs
+================================================
+#![allow(clippy::pub_underscore_fields)]
+
+extern crate anchor_lang;
+
+anchor_lang::declare_program!(hylo_exchange);
+anchor_lang::declare_program!(hylo_stability_pool);
+
+mod exchange_client;
+pub mod pda;
+mod stability_pool_client;
+pub mod util;
+
+pub mod exchange {
+  pub use super::exchange_client::*;
+  pub use super::hylo_exchange::*;
+}
+
+pub mod stability_pool {
+  pub use super::hylo_stability_pool::*;
+  pub use super::stability_pool_client::*;
+}
+
+
+
+================================================
+FILE: src/pda.rs
+================================================
+use crate::{exchange, stability_pool};
+
+use anchor_client::solana_sdk::bpf_loader;
+use anchor_lang::prelude::Pubkey;
+use anchor_spl::associated_token::get_associated_token_address;
+
+macro_rules! pda {
+  ($program_id:expr, $base:expr) => {
+    Pubkey::find_program_address(&[$base.as_ref()], &$program_id).0
+  };
+  ($program_id:expr, $base:expr, $key:expr) => {
+    Pubkey::find_program_address(&[$base.as_ref(), $key.as_ref()], &$program_id)
+      .0
+  };
+}
+
+#[must_use]
+pub fn hylo() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::HYLO)
+}
+
+#[must_use]
+pub fn vault(mint: Pubkey) -> Pubkey {
+  get_associated_token_address(&vault_auth(mint), &mint)
+}
+
+#[must_use]
+pub fn vault_auth(mint: Pubkey) -> Pubkey {
+  pda!(exchange::ID, exchange::constants::VAULT_AUTH, mint)
+}
+
+#[must_use]
+pub fn lst_header(mint: Pubkey) -> Pubkey {
+  pda!(exchange::ID, exchange::constants::LST_HEADER, mint)
+}
+
+#[must_use]
+pub fn fee_vault(mint: Pubkey) -> Pubkey {
+  get_associated_token_address(&fee_auth(mint), &mint)
+}
+
+#[must_use]
+pub fn fee_auth(mint: Pubkey) -> Pubkey {
+  pda!(exchange::ID, exchange::constants::FEE_AUTH, mint)
+}
+
+#[must_use]
+pub fn ata(auth: Pubkey, mint: Pubkey) -> Pubkey {
+  get_associated_token_address(&auth, &mint)
+}
+
+#[must_use]
+pub fn hyusd() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::HYUSD)
+}
+
+#[must_use]
+pub fn hyusd_ata(auth: Pubkey) -> Pubkey {
+  ata(auth, hyusd())
+}
+
+#[must_use]
+pub fn xsol() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::XSOL)
+}
+
+#[must_use]
+pub fn xsol_ata(auth: Pubkey) -> Pubkey {
+  ata(auth, xsol())
+}
+
+#[must_use]
+pub fn hyusd_auth() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::MINT_AUTH, hyusd())
+}
+
+#[must_use]
+pub fn xsol_auth() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::MINT_AUTH, xsol())
+}
+
+#[must_use]
+pub fn lst_registry_auth() -> Pubkey {
+  pda!(exchange::ID, exchange::constants::LST_REGISTRY_AUTH)
+}
+
+#[must_use]
+pub fn event_auth(program: Pubkey) -> Pubkey {
+  pda!(program, "__event_authority")
+}
+
+#[must_use]
+pub fn pool_config() -> Pubkey {
+  pda!(stability_pool::ID, stability_pool::constants::POOL_CONFIG)
+}
+
+#[must_use]
+pub fn shyusd() -> Pubkey {
+  pda!(stability_pool::ID, stability_pool::constants::STAKED_HYUSD)
+}
+
+#[must_use]
+pub fn shyusd_ata(auth: Pubkey) -> Pubkey {
+  ata(auth, shyusd())
+}
+
+#[must_use]
+pub fn pool_auth() -> Pubkey {
+  pda!(stability_pool::ID, stability_pool::constants::POOL_AUTH)
+}
+
+#[must_use]
+pub fn hyusd_pool() -> Pubkey {
+  ata(pool_auth(), hyusd())
+}
+
+#[must_use]
+pub fn xsol_pool() -> Pubkey {
+  ata(pool_auth(), xsol())
+}
+
+#[must_use]
+pub fn stability_pool_program_data() -> Pubkey {
+  pda!(bpf_loader::ID, stability_pool::ID)
+}
+
+#[must_use]
+pub fn exchange_program_data() -> Pubkey {
+  pda!(bpf_loader::ID, exchange::ID)
+}
+
+
+
+================================================
+FILE: src/stability_pool_client.rs
+================================================
+use crate::stability_pool::client::{accounts, args};
+use crate::stability_pool::events::StabilityPoolStats;
+use crate::util::{
+  simulation_config, ProgramClient, EXCHANGE_LOOKUP_TABLE, SOL_USD_PYTH_FEED,
+  STABILITY_POOL_LOOKUP_TABLE,
+};
+use crate::{exchange, pda, stability_pool};
+
+use std::sync::Arc;
+
+use anchor_client::solana_sdk::signature::{Keypair, Signature};
+use anchor_client::Program;
+use anchor_lang::prelude::Pubkey;
+use anchor_lang::AnchorDeserialize;
+use anchor_spl::token;
+use anyhow::{anyhow, Result};
+use base64::prelude::{Engine, BASE64_STANDARD};
+
+pub struct StabilityPoolClient {
+  program: Program<Arc<Keypair>>,
+  keypair: Arc<Keypair>,
+}
+
+impl ProgramClient for StabilityPoolClient {
+  const PROGRAM_ID: Pubkey = stability_pool::ID;
+
+  fn build_client(
+    program: Program<Arc<Keypair>>,
+    keypair: Arc<Keypair>,
+  ) -> StabilityPoolClient {
+    StabilityPoolClient { program, keypair }
+  }
+
+  fn program(&self) -> &Program<Arc<Keypair>> {
+    &self.program
+  }
+
+  fn keypair(&self) -> Arc<Keypair> {
+    self.keypair.clone()
+  }
+}
+
+impl StabilityPoolClient {
+  /// Rebalances stability pool by swapping stablecoin to levercoin.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn rebalance_stable_to_lever(&self) -> Result<Signature> {
+    let accounts = accounts::RebalanceStableToLever {
+      payer: self.program.payer(),
+      pool_config: pda::pool_config(),
+      hylo: pda::hylo(),
+      stablecoin_mint: pda::hyusd(),
+      stablecoin_pool: pda::hyusd_pool(),
+      pool_auth: pda::pool_auth(),
+      levercoin_pool: pda::xsol_pool(),
+      fee_auth: pda::fee_auth(pda::hyusd()),
+      fee_vault: pda::fee_vault(pda::hyusd()),
+      levercoin_mint: pda::xsol(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      stablecoin_auth: pda::hyusd_auth(),
+      levercoin_auth: pda::xsol_auth(),
+      hylo_event_authority: pda::event_auth(exchange::ID),
+      hylo_exchange_program: exchange::ID,
+      token_program: token::ID,
+      event_authority: pda::event_auth(stability_pool::ID),
+      program: stability_pool::ID,
+    };
+    let args = args::RebalanceStableToLever {};
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        STABILITY_POOL_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Rebalances levercoin from the stability pool back to stablecoin.
+  ///
+  /// # Errors
+  /// - Transaction failure
+  pub async fn rebalance_lever_to_stable(&self) -> Result<Signature> {
+    let accounts = accounts::RebalanceLeverToStable {
+      payer: self.program.payer(),
+      pool_config: pda::pool_config(),
+      hylo: pda::hylo(),
+      stablecoin_mint: pda::hyusd(),
+      stablecoin_pool: pda::hyusd_pool(),
+      pool_auth: pda::pool_auth(),
+      levercoin_pool: pda::xsol_pool(),
+      fee_auth: pda::fee_auth(pda::hyusd()),
+      fee_vault: pda::fee_vault(pda::hyusd()),
+      levercoin_mint: pda::xsol(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+      stablecoin_auth: pda::hyusd_auth(),
+      levercoin_auth: pda::xsol_auth(),
+      hylo_event_authority: pda::event_auth(exchange::ID),
+      hylo_exchange_program: exchange::ID,
+      token_program: token::ID,
+      event_authority: pda::event_auth(stability_pool::ID),
+      program: stability_pool::ID,
+    };
+    let args = args::RebalanceLeverToStable {};
+    let instructions = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .instructions()?;
+    let lookup_tables = self
+      .load_multiple_lookup_tables(&[
+        EXCHANGE_LOOKUP_TABLE,
+        STABILITY_POOL_LOOKUP_TABLE,
+      ])
+      .await?;
+    let sig = self
+      .send_v0_transaction(&instructions, &lookup_tables)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Simulates the `get_stats` instruction on the stability pool.
+  ///
+  /// # Errors
+  /// - Simulation failure
+  /// - Return data access or deserialization
+  pub async fn simulate_get_stats(&self) -> Result<StabilityPoolStats> {
+    let accounts = accounts::GetStats {
+      pool_config: pda::pool_config(),
+      hylo: pda::hylo(),
+      stablecoin_mint: pda::hyusd(),
+      levercoin_mint: pda::xsol(),
+      pool_auth: pda::pool_auth(),
+      stablecoin_pool: pda::hyusd_pool(),
+      levercoin_pool: pda::xsol_pool(),
+      lp_token_mint: pda::shyusd(),
+      sol_usd_pyth_feed: SOL_USD_PYTH_FEED,
+    };
+    let args = args::GetStats {};
+    let tx = self
+      .program
+      .request()
+      .accounts(accounts)
+      .args(args)
+      .signed_transaction()
+      .await?;
+    let rpc = self.program.rpc();
+    let (data, _) = rpc
+      .simulate_transaction_with_config(&tx, simulation_config())
+      .await?
+      .value
+      .return_data
+      .ok_or(anyhow!("No return data for `get_stats`"))?
+      .data;
+    let bytes = BASE64_STANDARD.decode(data)?;
+    let stats = StabilityPoolStats::try_from_slice(&bytes)?;
+    Ok(stats)
+  }
+}
+
+
+
+================================================
+FILE: src/util.rs
+================================================
+use std::sync::Arc;
+
+use anchor_client::solana_client::rpc_config::RpcSimulateTransactionConfig;
+use anchor_client::solana_sdk::account::Account;
+use anchor_client::solana_sdk::address_lookup_table::state::AddressLookupTable;
+use anchor_client::solana_sdk::address_lookup_table::AddressLookupTableAccount;
+use anchor_client::solana_sdk::commitment_config::CommitmentConfig;
+use anchor_client::solana_sdk::instruction::Instruction;
+use anchor_client::solana_sdk::message::{v0, VersionedMessage};
+use anchor_client::solana_sdk::pubkey;
+use anchor_client::solana_sdk::pubkey::Pubkey;
+use anchor_client::solana_sdk::signature::{Keypair, Signature};
+use anchor_client::solana_sdk::transaction::VersionedTransaction;
+use anchor_client::{Client, Cluster, Program};
+use anchor_lang::prelude::AccountMeta;
+use anyhow::{anyhow, Result};
+use itertools::Itertools;
+
+pub const EXCHANGE_LOOKUP_TABLE: Pubkey =
+  pubkey!("E1jD3vdypYukwy9SWgWCnAJEvKC4Uj7MEc3c4S2LogD9");
+
+pub const STABILITY_POOL_LOOKUP_TABLE: Pubkey =
+  pubkey!("Gb35n7SYMZCwCZbmxJMqoFsFX1mVhdSXmwo8wAJ8whWC");
+
+pub const LST_REGISTRY_LOOKUP_TABLE: Pubkey =
+  pubkey!("9Mb2Mt76AN7eNY3BBA4LgfTicARXhcEEokTBfsN47noK");
+
+pub const SOL_USD_PYTH_FEED: Pubkey =
+  pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
+
+/// Default configuration to use in simulated transactions.
+#[must_use]
+pub fn simulation_config() -> RpcSimulateTransactionConfig {
+  RpcSimulateTransactionConfig {
+    sig_verify: false,
+    replace_recent_blockhash: true,
+    commitment: Some(CommitmentConfig::confirmed()),
+    ..Default::default()
+  }
+}
+
+/// Deserializes an account into an address lookup table.
+///
+/// # Errors
+/// - Account data cannot be deserialized
+fn deserialize_lookup_table(
+  key: &Pubkey,
+  account: &Account,
+) -> Result<AddressLookupTableAccount> {
+  let table = AddressLookupTable::deserialize(&account.data)?;
+  Ok(AddressLookupTableAccount {
+    key: *key,
+    addresses: table.addresses.to_vec(),
+  })
+}
+
+/// Abstracts the construction of client structs with `anchor_client::Program`.
+#[async_trait::async_trait]
+pub trait ProgramClient: Sized {
+  const PROGRAM_ID: Pubkey;
+
+  fn build_client(
+    program: Program<Arc<Keypair>>,
+    keypair: Arc<Keypair>,
+  ) -> Self;
+
+  fn program(&self) -> &Program<Arc<Keypair>>;
+
+  fn keypair(&self) -> Arc<Keypair>;
+
+  /// Constructs the given client with ID `Self::PROGRAM_ID`.
+  ///
+  /// # Errors
+  /// - Underlying Anchor program creation
+  fn new_from_keypair(
+    cluster: Cluster,
+    keypair: Keypair,
+    config: CommitmentConfig,
+  ) -> Result<Self> {
+    let keypair = Arc::new(keypair);
+    let client = Client::new_with_options(cluster, keypair.clone(), config);
+    let program = client.program(Self::PROGRAM_ID)?;
+    Ok(Self::build_client(program, keypair))
+  }
+
+  /// Builds a versioned transaction from instructions and lookup tables.
+  ///
+  /// # Errors
+  /// - Failed to get the latest blockhash
+  /// - Failed to compile the message
+  /// - Failed to create the transaction
+  /// - Failed to send the transaction
+  async fn send_v0_transaction(
+    &self,
+    instructions: &[Instruction],
+    lookup_tables: &[AddressLookupTableAccount],
+  ) -> Result<Signature> {
+    let recent_blockhash = self.program().rpc().get_latest_blockhash().await?;
+    let message = v0::Message::try_compile(
+      &self.program().payer(),
+      instructions,
+      lookup_tables,
+      recent_blockhash,
+    )?;
+    let tx = VersionedTransaction::try_new(
+      VersionedMessage::V0(message),
+      &[self.keypair()],
+    )?;
+    let sig = self
+      .program()
+      .rpc()
+      .send_and_confirm_transaction(&tx)
+      .await?;
+    Ok(sig)
+  }
+
+  /// Creates `remaining_accounts` array from LST registry table with all
+  /// headers writable.
+  ///
+  /// # Errors
+  /// - Lookup table account doesn't exist
+  /// - Malformed structure (preamble cannot be split at 16)
+  async fn load_lst_registry(
+    &self,
+  ) -> Result<(Vec<AccountMeta>, AddressLookupTableAccount)> {
+    let table = self.load_lookup_table(&LST_REGISTRY_LOOKUP_TABLE).await?;
+    if let Some((preamble, blocks)) = table.addresses.split_at_checked(16) {
+      let preamble = preamble
+        .iter()
+        .map(|key| AccountMeta::new_readonly(*key, false));
+      let blocks =
+        blocks
+          .iter()
+          .tuples()
+          .flat_map(|(header, mint, vault, pool_state)| {
+            [
+              AccountMeta::new(*header, false),
+              AccountMeta::new_readonly(*mint, false),
+              AccountMeta::new_readonly(*vault, false),
+              AccountMeta::new_readonly(*pool_state, false),
+            ]
+          });
+      let remaining_accounts = preamble.chain(blocks).collect_vec();
+      Ok((remaining_accounts, table))
+    } else {
+      Err(anyhow!("Malformed LST registry preamble."))
+    }
+  }
+
+  /// Loads an address lookup table by public key.
+  ///
+  /// # Errors
+  /// - Failed to fetch the account
+  /// - Failed to deserialize account data
+  async fn load_lookup_table(
+    &self,
+    key: &Pubkey,
+  ) -> Result<AddressLookupTableAccount> {
+    let account = self.program().rpc().get_account(key).await?;
+    deserialize_lookup_table(key, &account)
+  }
+
+  /// Loads address lookup tables at given addresses.
+  /// # Errors
+  /// - Failed to fetch lookup table account
+  /// - Failed to deserialize
+  async fn load_multiple_lookup_tables(
+    &self,
+    pubkeys: &[Pubkey],
+  ) -> Result<Vec<AddressLookupTableAccount>> {
+    self
+      .program()
+      .rpc()
+      .get_multiple_accounts(pubkeys)
+      .await?
+      .iter()
+      .zip(pubkeys)
+      .map(|(opt, key)| {
+        if let Some(account) = opt {
+          deserialize_lookup_table(key, account)
+        } else {
+          Err(anyhow!("No lookup table found at address {key}."))
+        }
+      })
+      .try_collect()
+  }
+}
+
+
+
+================================================
+FILE: .github/workflows/ci.yml
+================================================
+name: "Hylo SDK CI"
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+
+env:
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+jobs:
+  check-sdk-version:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check SDK version
+      run: ./bin/check-sdk-version.sh
+
+  build:
+    needs: check-sdk-version
+    if: |
+      always() &&
+      (github.event_name == 'push' || needs.check-sdk-version.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/github-script@v6
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL);
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN);
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/flakehub-cache-action@main
+    - uses: mozilla-actions/sccache-action@v0.0.9
+    - run: nix develop .#nightly --command ./bin/lint.sh
+    - run: nix develop --command ./bin/build.sh
+
+  publish:
+    needs: build
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/flakehub-cache-action@main
+    - uses: mozilla-actions/sccache-action@v0.0.9
+    - run: nix develop --command ./bin/publish.sh
+
+
+
