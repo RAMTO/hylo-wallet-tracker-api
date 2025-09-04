@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+Always use .env.example as the template for environment variables, add new variables in this file
+Always ensure the project builds successfully and tests pass with at least 80% coverage before committing
+Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates
+Before starting any feature, review the @docs folder thoroughly - read the PRD, architecture, and current plan to understand context and avoid duplicating work
