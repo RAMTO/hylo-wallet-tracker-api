@@ -204,3 +204,275 @@ A1 (HTTP Client) ──► A3 (Service & Health - Minimal) ──► B (Tokens) 
 - [x] **A3 Complete:** Solana service bootstrap and health monitoring (HTTP-only) ✅
 - [x] **A4 Skipped:** Integration testing deferred for MVP approach 🟢
 - [x] **Block A Done:** Core connectivity ready, proceed to Block B (Tokens & Balances) ✅
+
+---
+
+## Block B — Tokens & Balances (hyUSD, sHYUSD, xSOL)
+
+### **Overview**
+
+Implements Hylo token handling, ATA derivation, and multi-token balance fetching. Provides core wallet balance functionality for hyUSD, sHYUSD, and xSOL tokens with proper decimal handling and API integration.
+
+**Module Path:** `/internal/tokens`  
+**Dependencies:** Block A (`/internal/solana` HTTPClient, Address, AccountInfo types), Hylo token mint addresses
+
+### **Overall Progress**
+
+- [ ] **Phase B1:** Token Configuration & Types _(0/4 tasks completed)_ 🟡
+- [ ] **Phase B2:** ATA Derivation & Address Handling _(0/3 tasks completed)_ 🟡
+- [ ] **Phase B3:** Balance Service & Multi-Token Fetching _(0/4 tasks completed)_ 🟡
+- [ ] **Phase B4:** API Integration & Response Formatting _(0/3 tasks completed)_ 🟡
+
+**Block B Status:** 🟡 Pending _(Ready to start - Block A dependencies met)_
+
+### **Phase B1: Token Configuration & Types** _(Independent - 2-3 hours)_
+
+**Deliverables:**
+
+- [ ] Hylo token constants and mint addresses
+- [ ] Token decimal precision configuration
+- [ ] Token metadata and validation
+- [ ] Comprehensive test suite for token handling
+
+**Components:**
+
+- [ ] `config.go` - Token mint addresses and decimal configurations
+- [ ] `types.go` - Token-specific types (TokenBalance, TokenInfo, WalletBalances)
+- [ ] `constants.go` - Hylo token constants (mints, decimals, symbols)
+- [ ] `config_test.go` - Token configuration validation tests
+
+**Implementation Tasks:**
+
+1. **Token Constants & Configuration** (1 hour) 🟡
+
+   - [ ] Define Hylo token mint addresses for mainnet (hyUSD, sHYUSD, xSOL)
+   - [ ] Set token decimal precision (likely 6 for stablecoins, 9 for xSOL)
+   - [ ] Add token symbol mappings and display names
+   - [ ] Environment variable configuration for mint addresses
+
+2. **Token Types & Structures** (45 min) 🟡
+
+   - [ ] Define `TokenInfo` struct with mint (`solana.Address`), decimals, symbol
+   - [ ] Define `TokenBalance` struct with amount, decimals, formatted value
+   - [ ] Define `WalletBalances` response struct with all token balances + `solana.Slot`
+   - [ ] Leverage existing `solana.Address` validation, add token-specific validations
+
+3. **Token Registry & Lookup** (45 min) 🟡
+
+   - [ ] Implement token registry with mint → metadata mapping
+   - [ ] Add token lookup functions by mint address
+   - [ ] Token validation and supported token checking
+   - [ ] Helper functions for decimal formatting and parsing
+
+4. **Testing & Validation** (30 min) 🟡
+   - [ ] Unit tests for token configuration loading
+   - [ ] Test token registry lookups and validations
+   - [ ] Test decimal formatting and precision handling
+   - [ ] Validate against known Hylo token addresses
+
+**Acceptance Criteria:**
+
+- [ ] All Hylo token mints correctly configured for mainnet
+- [ ] Token decimal handling matches on-chain precision
+- [ ] Token validation prevents unsupported mint addresses
+- [ ] Tests achieve >90% coverage
+- [ ] Configuration loads from environment variables
+
+### **Phase B2: ATA Derivation & Address Handling** _(Depends on B1 - 2-3 hours)_
+
+**Deliverables:**
+
+- [ ] Associated Token Account (ATA) derivation logic
+- [ ] Wallet-token address computation
+- [ ] Address validation and error handling
+- [ ] Comprehensive test suite with known address vectors
+
+**Components:**
+
+- [ ] `ata.go` - ATA derivation and address computation
+- [ ] `ata_test.go` - ATA derivation tests with golden vectors
+- [ ] `validation.go` - Address validation and sanitization
+- [ ] `testdata/` - Known ATA addresses for test validation
+
+**Implementation Tasks:**
+
+1. **ATA Derivation Core** (1.5 hours) 🟡
+
+   - [ ] Implement `DeriveAssociatedTokenAddress(wallet, mint solana.Address)` function
+   - [ ] Use SPL Token program constants and PDA derivation
+   - [ ] Return `solana.Address` type for consistency
+   - [ ] Leverage existing `solana.Address.Validate()` for error handling
+
+2. **Multi-Token ATA Computation** (45 min) 🟡
+
+   - [ ] Batch ATA derivation for all Hylo tokens
+   - [ ] `GetWalletATAs(wallet solana.Address)` → map of token → `solana.Address`
+   - [ ] Efficient computation avoiding duplicate derivations
+   - [ ] Use existing `solana.Address` validation patterns
+
+3. **Testing & Golden Vectors** (45 min) 🟡
+   - [ ] Test ATA derivation against known wallet addresses
+   - [ ] Golden test vectors for reference wallet ATAs
+   - [ ] Test error cases (invalid wallet, invalid mint)
+   - [ ] Validate ATA addresses match Solana Explorer
+
+**Acceptance Criteria:**
+
+- [ ] ATA derivation matches Solana standard implementation
+- [ ] Derived addresses verified against reference wallet
+- [ ] Handles all Hylo token mints correctly
+- [ ] Tests achieve >90% coverage
+- [ ] Error handling for malformed addresses
+
+### **Phase B3: Balance Service & Multi-Token Fetching** _(Depends on B1, B2 & Block A - 3-4 hours)_
+
+**Deliverables:**
+
+- [ ] Balance fetching service using Solana HTTP client
+- [ ] Multi-token balance queries in single operation
+- [ ] Balance parsing with proper decimal handling
+- [ ] Core `GetBalances(ctx, wallet)` function
+
+**Components:**
+
+- [ ] `service.go` - Balance service with `solana.HTTPClient` integration
+- [ ] `service_test.go` - Service tests with mocked `solana.HTTPClient`
+- [ ] `parser.go` - SPL token account data parsing from `solana.AccountInfo`
+- [ ] `parser_test.go` - Balance parsing tests
+
+**Implementation Tasks:**
+
+1. **Balance Service Core** (1.5 hours) 🟡
+
+   - [ ] Create `BalanceService` struct with `*solana.HTTPClient` field
+   - [ ] Implement `NewBalanceService(httpClient *solana.HTTPClient)` constructor
+   - [ ] Add service lifecycle management and token configuration
+   - [ ] Integration with existing `solana.Service.GetHTTPClient()` from Block A
+
+2. **Multi-Token Balance Fetching** (1.5 hours) 🟡
+
+   - [ ] `GetBalances(ctx, wallet solana.Address)` → `WalletBalances` with all tokens
+   - [ ] Use existing `httpClient.GetAccount(ctx, ata, solana.CommitmentConfirmed)`
+   - [ ] Handle `solana.ErrAccountNotFound` (zero balance) gracefully
+   - [ ] Parse `solana.AccountInfo.Data` for SPL token account structure
+
+3. **Balance Parsing & Formatting** (45 min) 🟡
+
+   - [ ] Parse SPL token account from `solana.AccountInfo.Data` (165 bytes)
+   - [ ] Extract balance (bytes 64-72) as uint64, convert using token decimals
+   - [ ] Format balances for display (string with proper decimals)
+   - [ ] Handle edge cases (closed accounts, frozen accounts)
+
+4. **Testing & Mock Integration** (45 min) 🟡
+   - [ ] Unit tests with mocked `solana.HTTPClient.GetAccount()`
+   - [ ] Test balance fetching using reference wallet (`A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g`)
+   - [ ] Test `solana.ErrAccountNotFound` handling for zero balances
+   - [ ] Test decimal conversion accuracy with SPL token account parsing
+
+**Acceptance Criteria:**
+
+- [ ] Balance fetching uses existing `solana.HTTPClient.GetAccount()` method
+- [ ] Accurate SPL token account parsing from `solana.AccountInfo.Data`
+- [ ] Handles `solana.ErrAccountNotFound` for zero balances gracefully
+- [ ] Tests achieve >90% coverage with existing error handling patterns
+- [ ] Performance suitable for real-time API responses
+
+### **Phase B4: API Integration & Response Formatting** _(Depends on B3 & existing server - 2-3 hours)_
+
+**Deliverables:**
+
+- [ ] REST endpoint `GET /wallet/:address/balances`
+- [ ] JSON response formatting with proper structure
+- [ ] Error handling and validation
+- [ ] Integration with existing server routes
+
+**Components:**
+
+- [ ] `handlers.go` - HTTP handlers for balance endpoints
+- [ ] `handlers_test.go` - HTTP handler tests
+- [ ] `responses.go` - JSON response structures and formatting
+- [ ] Update `internal/server/routes.go` with new balance route
+
+**Implementation Tasks:**
+
+1. **HTTP Handler Implementation** (1 hour) 🟡
+
+   - [ ] Implement `GetWalletBalances(c *fiber.Ctx)` handler
+   - [ ] Extract wallet address as `solana.Address`, use existing validation
+   - [ ] Call balance service and handle errors using existing patterns
+   - [ ] Return properly formatted JSON response
+
+2. **Response Formatting & Structure** (45 min) 🟡
+
+   - [ ] Define API response structure matching architecture spec
+   - [ ] Include slot number and timestamp for freshness tracking
+   - [ ] Format token balances with appropriate decimal places
+   - [ ] Add metadata fields (updated_at, slot, etc.)
+
+3. **Server Integration & Routing** (45 min) 🟡
+
+   - [ ] Add balance route to existing `internal/server/routes.go`
+   - [ ] Initialize balance service using `solana.Service.GetHTTPClient()`
+   - [ ] Add proper middleware (rate limiting, CORS) using existing patterns
+   - [ ] Update server startup to initialize balance service with Solana dependency
+
+4. **Testing & Validation** (30 min) 🟡
+   - [ ] HTTP integration tests for balance endpoint
+   - [ ] Test invalid wallet address handling
+   - [ ] Test response format compliance
+   - [ ] Validate against reference wallet balances
+
+**Acceptance Criteria:**
+
+- [ ] `GET /wallet/:address/balances` endpoint functional
+- [ ] Response matches architecture specification format
+- [ ] Proper error handling for invalid addresses
+- [ ] Tests achieve >80% coverage
+- [ ] Integration with existing server architecture
+
+### **Dependencies & Phase Relationships**
+
+```
+Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) ──► B3 (Balance Service) ──► B4 (API Integration)
+                                                                     │
+                                                                     └──► Server Routes
+```
+
+**Phase Dependencies:**
+
+- **B1** independent - can start immediately after Block A
+- **B2** depends on B1 token configuration
+- **B3** depends on B1, B2, and Block A HTTP client
+- **B4** depends on B3 and existing server infrastructure
+
+**Testing Strategy:**
+
+- Each phase has comprehensive unit tests with >90% coverage target
+- B2 uses golden test vectors for ATA derivation validation
+- B3 uses mocked Solana responses for balance service testing
+- B4 includes HTTP integration tests for end-to-end validation
+
+---
+
+### **Block B Completion Checklist**
+
+**Files to Create:** _(Total estimated: 12-14 files for Block B)_
+
+- [ ] **B1: 4 files** 🟡
+  - [ ] `config.go`, `types.go`, `constants.go`, `config_test.go`
+- [ ] **B2: 4 files** 🟡
+  - [ ] `ata.go`, `ata_test.go`, `validation.go`, `testdata/` (golden vectors)
+- [ ] **B3: 4 files** 🟡
+  - [ ] `service.go`, `service_test.go`, `parser.go`, `parser_test.go`
+- [ ] **B4: 3 files** 🟡
+  - [ ] `handlers.go`, `handlers_test.go`, `responses.go`
+- [ ] **Integration: 1 file** 🟡
+  - [ ] Update `internal/server/routes.go`
+
+**Key Milestones:**
+
+- [ ] **B1 Complete:** Token configuration and types ready
+- [ ] **B2 Complete:** ATA derivation working with test vectors
+- [ ] **B3 Complete:** Balance service fetching all token balances
+- [ ] **B4 Complete:** API endpoint integrated and functional
+- [ ] **Block B Done:** Wallet balance functionality complete, ready for Block C (Price Engine)
