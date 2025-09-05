@@ -22,7 +22,7 @@ const (
 	// Based on Solana SPL token standards and Hylo protocol specifications
 	HyUSDDecimals  = 6 // Standard stablecoin precision (6 decimals)
 	SHyUSDDecimals = 6 // Staked hyUSD shares (same as hyUSD)
-	XSOLDecimals   = 9 // SOL-based token precision (9 decimals like SOL)
+	XSOLDecimals   = 6 // xSOL token precision (6 decimals, same as other Hylo tokens)
 
 	// Token Symbols for display and identification
 	HyUSDSymbol  = "hyUSD"

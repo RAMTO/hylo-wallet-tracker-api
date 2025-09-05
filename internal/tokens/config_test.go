@@ -253,9 +253,9 @@ func TestTokenBalance(t *testing.T) {
 
 		for _, tc := range testCases {
 			balance := NewTokenBalance(tokenInfo, tc.rawAmount)
-			if balance.DecimalAmount != tc.expectedDecimal {
+			if balance.FormattedAmount != tc.expectedDecimal {
 				t.Errorf("Raw amount %d: expected %s, got %s",
-					tc.rawAmount, tc.expectedDecimal, balance.DecimalAmount)
+					tc.rawAmount, tc.expectedDecimal, balance.FormattedAmount)
 			}
 
 			if balance.RawAmount != tc.rawAmount {

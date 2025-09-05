@@ -149,8 +149,8 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 				if balance.RawAmount != 0 {
 					t.Errorf("Expected zero balance for not found account, got %d", balance.RawAmount)
 				}
-				if balance.DecimalAmount != "0" {
-					t.Errorf("Expected decimal amount '0', got '%s'", balance.DecimalAmount)
+				if balance.FormattedAmount != "0" {
+					t.Errorf("Expected decimal amount '0', got '%s'", balance.FormattedAmount)
 				}
 				if balance.TokenInfo.Symbol != HyUSDSymbol {
 					t.Errorf("Expected symbol %s, got %s", HyUSDSymbol, balance.TokenInfo.Symbol)
@@ -169,8 +169,8 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 				if balance.RawAmount != 0 {
 					t.Errorf("Expected zero balance, got %d", balance.RawAmount)
 				}
-				if balance.DecimalAmount != "0" {
-					t.Errorf("Expected decimal amount '0', got '%s'", balance.DecimalAmount)
+				if balance.FormattedAmount != "0" {
+					t.Errorf("Expected decimal amount '0', got '%s'", balance.FormattedAmount)
 				}
 			},
 		},

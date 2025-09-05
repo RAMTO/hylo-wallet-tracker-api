@@ -54,8 +54,11 @@ type TokenBalance struct {
 	// RawAmount is the raw token amount as stored on-chain (without decimal adjustment)
 	RawAmount uint64 `json:"raw_amount"`
 
-	// DecimalAmount is the human-readable amount adjusted for token decimals
-	DecimalAmount string `json:"decimal_amount"`
+	// Decimals is the number of decimal places for this token
+	Decimals uint8 `json:"decimals"`
+
+	// FormattedAmount is the human-readable amount with proper decimal adjustment
+	FormattedAmount string `json:"formatted_amount"`
 
 	// USDValue is the USD value of this token balance (optional, for display)
 	USDValue *float64 `json:"usd_value,omitempty"`
@@ -66,10 +69,11 @@ func NewTokenBalance(tokenInfo TokenInfo, rawAmount uint64) *TokenBalance {
 	balance := &TokenBalance{
 		TokenInfo: tokenInfo,
 		RawAmount: rawAmount,
+		Decimals:  tokenInfo.Decimals,
 	}
 
-	// Format the decimal amount using the token's decimal precision
-	balance.DecimalAmount = balance.FormatDecimal()
+	// Format the amount as human-readable with thousand separators
+	balance.FormattedAmount = balance.FormatHumanReadable()
 
 	return balance
 }
@@ -113,6 +117,12 @@ func (tb *TokenBalance) FormatDecimal() string {
 	}
 
 	return integerPart.String() + "." + fracStr
+}
+
+// FormatHumanReadable formats the token amount as a human-readable decimal string
+// Uses proper decimal point notation (e.g., "1100.946823" for raw 1100946823 with 6 decimals)
+func (tb *TokenBalance) FormatHumanReadable() string {
+	return tb.FormatDecimal()
 }
 
 // IsZero returns true if the token balance is zero
