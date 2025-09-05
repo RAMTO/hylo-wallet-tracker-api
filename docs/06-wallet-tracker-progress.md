@@ -218,67 +218,67 @@ Implements Hylo token handling, ATA derivation, and multi-token balance fetching
 
 ### **Overall Progress**
 
-- [ ] **Phase B1:** Token Configuration & Types _(0/4 tasks completed)_ 🟡
+- [x] **Phase B1:** Token Configuration & Types _(4/4 tasks completed)_ ✅
 - [ ] **Phase B2:** ATA Derivation & Address Handling _(0/3 tasks completed)_ 🟡
 - [ ] **Phase B3:** Balance Service & Multi-Token Fetching _(0/4 tasks completed)_ 🟡
 - [ ] **Phase B4:** API Integration & Response Formatting _(0/3 tasks completed)_ 🟡
 
-**Block B Status:** 🟡 Pending _(Ready to start - Block A dependencies met)_
+**Block B Status:** 🚧 In Progress _(Phase B1 complete, proceeding to B2)_
 
 ### **Phase B1: Token Configuration & Types** _(Independent - 2-3 hours)_
 
 **Deliverables:**
 
-- [ ] Hylo token constants and mint addresses
-- [ ] Token decimal precision configuration
-- [ ] Token metadata and validation
-- [ ] Comprehensive test suite for token handling
+- [x] Hylo token constants and mint addresses
+- [x] Token decimal precision configuration
+- [x] Token metadata and validation
+- [x] Comprehensive test suite for token handling
 
 **Components:**
 
-- [ ] `config.go` - Token mint addresses and decimal configurations
-- [ ] `types.go` - Token-specific types (TokenBalance, TokenInfo, WalletBalances)
-- [ ] `constants.go` - Hylo token constants (mints, decimals, symbols)
-- [ ] `config_test.go` - Token configuration validation tests
+- [x] `config.go` - Token mint addresses and decimal configurations
+- [x] `types.go` - Token-specific types (TokenBalance, TokenInfo, WalletBalances)
+- [x] `constants.go` - Hylo token constants (mints, decimals, symbols)
+- [x] `config_test.go` - Token configuration validation tests
 
 **Implementation Tasks:**
 
-1. **Token Constants & Configuration** (1 hour) 🟡
+1. **Token Constants & Configuration** (1 hour) ✅
 
-   - [ ] Define Hylo token mint addresses for mainnet (hyUSD, sHYUSD, xSOL)
-   - [ ] Set token decimal precision (likely 6 for stablecoins, 9 for xSOL)
-   - [ ] Add token symbol mappings and display names
-   - [ ] Environment variable configuration for mint addresses
+   - [x] Define Hylo token mint addresses for mainnet (hyUSD, sHYUSD, xSOL)
+   - [x] Set token decimal precision (6 for stablecoins, 9 for xSOL)
+   - [x] Add token symbol mappings and display names
+   - [x] Environment variable configuration for mint addresses
 
-2. **Token Types & Structures** (45 min) 🟡
+2. **Token Types & Structures** (45 min) ✅
 
-   - [ ] Define `TokenInfo` struct with mint (`solana.Address`), decimals, symbol
-   - [ ] Define `TokenBalance` struct with amount, decimals, formatted value
-   - [ ] Define `WalletBalances` response struct with all token balances + `solana.Slot`
-   - [ ] Leverage existing `solana.Address` validation, add token-specific validations
+   - [x] Define `TokenInfo` struct with mint (`solana.Address`), decimals, symbol
+   - [x] Define `TokenBalance` struct with amount, decimals, formatted value
+   - [x] Define `WalletBalances` response struct with all token balances + `solana.Slot`
+   - [x] Leverage existing `solana.Address` validation, add token-specific validations
 
-3. **Token Registry & Lookup** (45 min) 🟡
+3. **Token Registry & Lookup** (45 min) ✅
 
-   - [ ] Implement token registry with mint → metadata mapping
-   - [ ] Add token lookup functions by mint address
-   - [ ] Token validation and supported token checking
-   - [ ] Helper functions for decimal formatting and parsing
+   - [x] Implement token registry with mint → metadata mapping
+   - [x] Add token lookup functions by mint address
+   - [x] Token validation and supported token checking
+   - [x] Helper functions for decimal formatting and parsing
 
-4. **Testing & Validation** (30 min) 🟡
-   - [ ] Unit tests for token configuration loading
-   - [ ] Test token registry lookups and validations
-   - [ ] Test decimal formatting and precision handling
-   - [ ] Validate against known Hylo token addresses
+4. **Testing & Validation** (30 min) ✅
+   - [x] Unit tests for token configuration loading
+   - [x] Test token registry lookups and validations
+   - [x] Test decimal formatting and precision handling
+   - [x] Validate against known Hylo token addresses
 
 **Acceptance Criteria:**
 
-- [ ] All Hylo token mints correctly configured for mainnet
-- [ ] Token decimal handling matches on-chain precision
-- [ ] Token validation prevents unsupported mint addresses
-- [ ] Tests achieve >90% coverage
-- [ ] Configuration loads from environment variables
+- [x] All Hylo token mints correctly configured for mainnet ✅
+- [x] Token decimal handling matches on-chain precision ✅
+- [x] Token validation prevents unsupported mint addresses ✅
+- [x] Tests achieve >90% coverage **(95.1%)** ✅
+- [x] Configuration loads from environment variables ✅
 
-### **Phase B2: ATA Derivation & Address Handling** _(Depends on B1 - 2-3 hours)_
+### **Phase B2: ATA Derivation & Address Handling** _(Depends on B1 ✅ - Ready to start - 2-3 hours)_
 
 **Deliverables:**
 
@@ -458,8 +458,8 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 
 **Files to Create:** _(Total estimated: 12-14 files for Block B)_
 
-- [ ] **B1: 4 files** 🟡
-  - [ ] `config.go`, `types.go`, `constants.go`, `config_test.go`
+- [x] **B1: 4 files** ✅
+  - [x] `config.go`, `types.go`, `constants.go`, `config_test.go`
 - [ ] **B2: 4 files** 🟡
   - [ ] `ata.go`, `ata_test.go`, `validation.go`, `testdata/` (golden vectors)
 - [ ] **B3: 4 files** 🟡
@@ -471,7 +471,7 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 
 **Key Milestones:**
 
-- [ ] **B1 Complete:** Token configuration and types ready
+- [x] **B1 Complete:** Token configuration and types ready ✅
 - [ ] **B2 Complete:** ATA derivation working with test vectors
 - [ ] **B3 Complete:** Balance service fetching all token balances
 - [ ] **B4 Complete:** API endpoint integrated and functional
