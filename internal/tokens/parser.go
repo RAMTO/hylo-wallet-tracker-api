@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"hylo-wallet-tracker-api/internal/solana"
+	"github.com/gagliardetto/solana-go"
+	solanainternal "hylo-wallet-tracker-api/internal/solana"
 )
 
 // SPL Token Account Layout Constants
@@ -31,9 +32,9 @@ const (
 // SPLTokenAccount represents a parsed SPL token account
 type SPLTokenAccount struct {
 	// Mint is the token mint address (32 bytes)
-	Mint solana.Address `json:"mint"`
+	Mint solanainternal.Address `json:"mint"`
 	// Owner is the account owner address (32 bytes)
-	Owner solana.Address `json:"owner"`
+	Owner solanainternal.Address `json:"owner"`
 	// Amount is the raw token amount as stored on-chain (8 bytes, u64)
 	Amount uint64 `json:"amount"`
 	// State indicates the account state (1 byte)
@@ -46,7 +47,7 @@ type SPLTokenAccount struct {
 
 // ParseSPLTokenAccount parses SPL token account data from Solana AccountInfo
 // Returns the parsed token account structure or error if data is invalid
-func ParseSPLTokenAccount(accountInfo *solana.AccountInfo) (*SPLTokenAccount, error) {
+func ParseSPLTokenAccount(accountInfo *solanainternal.AccountInfo) (*SPLTokenAccount, error) {
 	// Validate account owner is SPL Token Program
 	if accountInfo.Owner != SPLTokenProgramID {
 		return nil, fmt.Errorf("invalid token account owner: expected %s, got %s",
@@ -95,7 +96,7 @@ func ParseSPLTokenAccount(accountInfo *solana.AccountInfo) (*SPLTokenAccount, er
 }
 
 // bytesToAddress converts 32-byte slice to base58-encoded Solana Address
-func bytesToAddress(bytes []byte) (solana.Address, error) {
+func bytesToAddress(bytes []byte) (solanainternal.Address, error) {
 	if len(bytes) != 32 {
 		return "", fmt.Errorf("invalid address length: expected 32 bytes, got %d", len(bytes))
 	}
@@ -103,19 +104,16 @@ func bytesToAddress(bytes []byte) (solana.Address, error) {
 	// Debug: Show the raw bytes
 	// fmt.Printf("DEBUG: bytesToAddress input bytes (first 8): %v\n", bytes[:8])
 
-	// Encode bytes to base58 for Solana address
-	// Using the same base58 encoding utility from ata.go
-	encoded := encodeBase58(bytes)
-	if encoded == "" {
-		return "", fmt.Errorf("failed to encode address: invalid length")
-	}
+	// Convert bytes to Solana PublicKey and then to string
+	pubkey := solana.PublicKeyFromBytes(bytes)
+	encoded := pubkey.String()
 
 	// fmt.Printf("DEBUG: bytesToAddress result: %s\n", encoded)
-	return solana.Address(encoded), nil
+	return solanainternal.Address(encoded), nil
 }
 
 // ValidateTokenAccount performs additional validation on a parsed token account
-func ValidateTokenAccount(account *SPLTokenAccount, expectedMint solana.Address, expectedOwner solana.Address) error {
+func ValidateTokenAccount(account *SPLTokenAccount, expectedMint solanainternal.Address, expectedOwner solanainternal.Address) error {
 	// Validate account is initialized
 	if !account.IsInitialized {
 		return fmt.Errorf("token account is not initialized (state: %d)", account.State)
