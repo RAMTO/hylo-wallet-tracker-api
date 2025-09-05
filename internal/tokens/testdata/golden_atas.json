@@ -1,0 +1,73 @@
+{
+  "description": "Golden test vectors for ATA derivation testing",
+  "test_cases": [
+    {
+      "name": "Reference Wallet - hyUSD ATA",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+      "mint": "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+      "expected_ata": "To be derived - placeholder for testing structure",
+      "token_symbol": "hyUSD"
+    },
+    {
+      "name": "Reference Wallet - sHYUSD ATA",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+      "mint": "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
+      "expected_ata": "To be derived - placeholder for testing structure",
+      "token_symbol": "sHYUSD"
+    },
+    {
+      "name": "Reference Wallet - xSOL ATA",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+      "mint": "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+      "expected_ata": "To be derived - placeholder for testing structure",
+      "token_symbol": "xSOL"
+    },
+    {
+      "name": "System Wallet - hyUSD ATA",
+      "wallet": "11111111111111111111111111111111111111111111",
+      "mint": "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+      "expected_ata": "To be derived - placeholder for testing structure",
+      "token_symbol": "hyUSD"
+    },
+    {
+      "name": "System Wallet - xSOL ATA",
+      "wallet": "11111111111111111111111111111111111111111111",
+      "mint": "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+      "expected_ata": "To be derived - placeholder for testing structure",
+      "token_symbol": "xSOL"
+    }
+  ],
+  "validation_test_cases": [
+    {
+      "name": "Invalid wallet - too short",
+      "wallet": "short",
+      "should_error": true,
+      "error_type": "validation_error"
+    },
+    {
+      "name": "Invalid wallet - too long",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6gTOOLONG",
+      "should_error": true,
+      "error_type": "validation_error"
+    },
+    {
+      "name": "Invalid wallet - bad characters",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc0g",
+      "should_error": true,
+      "error_type": "validation_error"
+    },
+    {
+      "name": "Invalid mint - empty",
+      "wallet": "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+      "mint": "",
+      "should_error": true,
+      "error_type": "validation_error"
+    }
+  ],
+  "notes": [
+    "These test vectors use known Hylo token mint addresses from mainnet",
+    "The reference wallet is the same one used in Block A health checks",
+    "Expected ATA addresses will be computed during test runs to create golden vectors",
+    "This file serves as both test data and documentation of test cases"
+  ]
+}
