@@ -61,8 +61,8 @@ func main() {
 	// Run graceful shutdown in a separate goroutine
 	go gracefulShutdown(server, done)
 
-	log.Printf("Server is running on http://localhost%s", server.Addr)
-	log.Println("Swagger documentation is available at http://localhost:8080/swagger/index.html")
+	fmt.Printf("🚀 Server is running on http://localhost%s\n", server.Addr)
+	fmt.Println("📖 Swagger documentation is available at http://localhost:8080/swagger/index.html")
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("http server error: %s", err))
