@@ -220,10 +220,10 @@ Implements Hylo token handling, ATA derivation, and multi-token balance fetching
 
 - [x] **Phase B1:** Token Configuration & Types _(4/4 tasks completed)_ ✅
 - [x] **Phase B2:** ATA Derivation & Address Handling _(3/3 tasks completed)_ ✅
-- [ ] **Phase B3:** Balance Service & Multi-Token Fetching _(0/4 tasks completed)_ 🟡
+- [x] **Phase B3:** Balance Service & Multi-Token Fetching _(4/4 tasks completed)_ ✅
 - [ ] **Phase B4:** API Integration & Response Formatting _(0/3 tasks completed)_ 🟡
 
-**Block B Status:** 🚧 In Progress _(Phases B1, B2 complete, proceeding to B3)_
+**Block B Status:** 🚧 In Progress _(Phases B1, B2, B3 complete, ready for B4)_
 
 ### **Phase B1: Token Configuration & Types** _(Independent - 2-3 hours)_
 
@@ -325,58 +325,58 @@ Implements Hylo token handling, ATA derivation, and multi-token balance fetching
 - [x] Tests achieve >90% coverage **(91.6%)** ✅
 - [x] Error handling for malformed addresses ✅
 
-### **Phase B3: Balance Service & Multi-Token Fetching** _(Depends on B1 ✅, B2 ✅ & Block A ✅ - Ready to start - 3-4 hours)_
+### **Phase B3: Balance Service & Multi-Token Fetching** _(Depends on B1 ✅, B2 ✅ & Block A ✅ - 3-4 hours)_
 
 **Deliverables:**
 
-- [ ] Balance fetching service using Solana HTTP client
-- [ ] Multi-token balance queries in single operation
-- [ ] Balance parsing with proper decimal handling
-- [ ] Core `GetBalances(ctx, wallet)` function
+- [x] Balance fetching service using Solana HTTP client
+- [x] Multi-token balance queries in single operation
+- [x] Balance parsing with proper decimal handling
+- [x] Core `GetBalances(ctx, wallet)` function
 
 **Components:**
 
-- [ ] `service.go` - Balance service with `solana.HTTPClient` integration
-- [ ] `service_test.go` - Service tests with mocked `solana.HTTPClient`
-- [ ] `parser.go` - SPL token account data parsing from `solana.AccountInfo`
-- [ ] `parser_test.go` - Balance parsing tests
+- [x] `service.go` - Balance service with `solana.HTTPClient` integration
+- [x] `service_test.go` - Service tests with mocked `solana.HTTPClient`
+- [x] `parser.go` - SPL token account data parsing from `solana.AccountInfo`
+- [x] `parser_test.go` - Balance parsing tests
 
 **Implementation Tasks:**
 
-1. **Balance Service Core** (1.5 hours) 🟡
+1. **Balance Service Core** (1.5 hours) ✅
 
-   - [ ] Create `BalanceService` struct with `*solana.HTTPClient` field
-   - [ ] Implement `NewBalanceService(httpClient *solana.HTTPClient)` constructor
-   - [ ] Add service lifecycle management and token configuration
-   - [ ] Integration with existing `solana.Service.GetHTTPClient()` from Block A
+   - [x] Create `BalanceService` struct with `*solana.HTTPClient` field
+   - [x] Implement `NewBalanceService(httpClient *solana.HTTPClient)` constructor
+   - [x] Add service lifecycle management and token configuration
+   - [x] Integration with existing `solana.Service.GetHTTPClient()` from Block A
 
-2. **Multi-Token Balance Fetching** (1.5 hours) 🟡
+2. **Multi-Token Balance Fetching** (1.5 hours) ✅
 
-   - [ ] `GetBalances(ctx, wallet solana.Address)` → `WalletBalances` with all tokens
-   - [ ] Use existing `httpClient.GetAccount(ctx, ata, solana.CommitmentConfirmed)`
-   - [ ] Handle `solana.ErrAccountNotFound` (zero balance) gracefully
-   - [ ] Parse `solana.AccountInfo.Data` for SPL token account structure
+   - [x] `GetBalances(ctx, wallet solana.Address)` → `WalletBalances` with all tokens
+   - [x] Use existing `httpClient.GetAccount(ctx, ata, solana.CommitmentConfirmed)`
+   - [x] Handle `solana.ErrAccountNotFound` (zero balance) gracefully
+   - [x] Parse `solana.AccountInfo.Data` for SPL token account structure
 
-3. **Balance Parsing & Formatting** (45 min) 🟡
+3. **Balance Parsing & Formatting** (45 min) ✅
 
-   - [ ] Parse SPL token account from `solana.AccountInfo.Data` (165 bytes)
-   - [ ] Extract balance (bytes 64-72) as uint64, convert using token decimals
-   - [ ] Format balances for display (string with proper decimals)
-   - [ ] Handle edge cases (closed accounts, frozen accounts)
+   - [x] Parse SPL token account from `solana.AccountInfo.Data` (165 bytes)
+   - [x] Extract balance (bytes 64-72) as uint64, convert using token decimals
+   - [x] Format balances for display (string with proper decimals)
+   - [x] Handle edge cases (closed accounts, frozen accounts)
 
-4. **Testing & Mock Integration** (45 min) 🟡
-   - [ ] Unit tests with mocked `solana.HTTPClient.GetAccount()`
-   - [ ] Test balance fetching using reference wallet (`A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g`)
-   - [ ] Test `solana.ErrAccountNotFound` handling for zero balances
-   - [ ] Test decimal conversion accuracy with SPL token account parsing
+4. **Testing & Mock Integration** (45 min) ✅
+   - [x] Unit tests with mocked `solana.HTTPClient.GetAccount()`
+   - [x] Test balance fetching using reference wallet (`A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g`)
+   - [x] Test `solana.ErrAccountNotFound` handling for zero balances
+   - [x] Test decimal conversion accuracy with SPL token account parsing
 
 **Acceptance Criteria:**
 
-- [ ] Balance fetching uses existing `solana.HTTPClient.GetAccount()` method
-- [ ] Accurate SPL token account parsing from `solana.AccountInfo.Data`
-- [ ] Handles `solana.ErrAccountNotFound` for zero balances gracefully
-- [ ] Tests achieve >90% coverage with existing error handling patterns
-- [ ] Performance suitable for real-time API responses
+- [x] Balance fetching uses existing `solana.HTTPClient.GetAccount()` method ✅
+- [x] Accurate SPL token account parsing from `solana.AccountInfo.Data` ✅
+- [x] Handles `solana.ErrAccountNotFound` for zero balances gracefully ✅
+- [x] Tests achieve >90% coverage with existing error handling patterns **(>95%)** ✅
+- [x] Performance suitable for real-time API responses ✅
 
 ### **Phase B4: API Integration & Response Formatting** _(Depends on B3 & existing server - 2-3 hours)_
 
@@ -463,8 +463,8 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
   - [x] `config.go`, `types.go`, `constants.go`, `config_test.go`
 - [x] **B2: 5 files** ✅
   - [x] `ata.go`, `ata_test.go`, `validation.go`, `validation_test.go`, `testdata/golden_atas.json`
-- [ ] **B3: 4 files** 🟡
-  - [ ] `service.go`, `service_test.go`, `parser.go`, `parser_test.go`
+- [x] **B3: 4 files** ✅
+  - [x] `service.go`, `service_test.go`, `parser.go`, `parser_test.go`
 - [ ] **B4: 3 files** 🟡
   - [ ] `handlers.go`, `handlers_test.go`, `responses.go`
 - [ ] **Integration: 1 file** 🟡
@@ -474,6 +474,6 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 
 - [x] **B1 Complete:** Token configuration and types ready ✅
 - [x] **B2 Complete:** ATA derivation working with test vectors ✅
-- [ ] **B3 Complete:** Balance service fetching all token balances
+- [x] **B3 Complete:** Balance service fetching all token balances ✅
 - [ ] **B4 Complete:** API endpoint integrated and functional
 - [ ] **Block B Done:** Wallet balance functionality complete, ready for Block C (Price Engine)

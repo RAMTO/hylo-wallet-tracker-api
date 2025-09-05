@@ -11,10 +11,6 @@ import (
 
 // Solana program IDs for ATA derivation
 const (
-	// SPL Token Program ID (using valid 44-character address for testing)
-	// In production, this should be the real SPL Token program ID
-	TokenProgramID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-
 	// Associated Token Program ID (using valid 44-character address for testing)
 	// In production, this should be the real Associated Token program ID
 	AssociatedTokenProgramID = "ATokenGqhhm39XWKyoU9QkZJhbT5gTcfA5q3eHpDG7d"
@@ -55,7 +51,7 @@ func DeriveAssociatedTokenAddress(wallet, mint solana.Address) (solana.Address, 
 		return solana.Address(""), fmt.Errorf("failed to decode mint address: %w", err)
 	}
 
-	tokenProgramBytes, err := decodeBase58(TokenProgramID)
+	tokenProgramBytes, err := decodeBase58(SPLTokenProgramID)
 	if err != nil {
 		return solana.Address(""), fmt.Errorf("failed to decode token program ID: %w", err)
 	}

@@ -6,6 +6,10 @@ import "hylo-wallet-tracker-api/internal/solana"
 // These addresses are for Solana mainnet-beta as specified in Hylo documentation
 
 const (
+	// Solana Program IDs
+	// SPLTokenProgramID is the official SPL Token Program on Solana mainnet-beta
+	// This program manages all SPL token accounts and operations
+	SPLTokenProgramID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 	// TokenDecimals defines the decimal precision for each token
 	// Based on Solana SPL token standards and Hylo protocol specifications
 	HyUSDDecimals  = 6 // Standard stablecoin precision (6 decimals)
