@@ -383,26 +383,26 @@ Implements Hylo token handling, ATA derivation, and multi-token balance fetching
 **Deliverables:**
 
 - [ ] REST endpoint `GET /wallet/:address/balances`
-- [ ] TokenService wrapper for future extensibility (Block C preparation)
+- [ ] Refactored TokenService (renamed from BalanceService) for Block C preparation
 - [ ] Direct WalletBalances JSON response (no API wrapper)
 - [ ] Strict error handling (all tokens must succeed)
 - [ ] Integration with existing server routes
 
 **Components:**
 
-- [ ] `internal/tokens/token_service.go` - TokenService wrapper around BalanceService
+- [ ] Refactor `internal/tokens/service.go` - Rename BalanceService to TokenService
 - [ ] Update `internal/server/server.go` - Add TokenService to Server struct
 - [ ] Update `internal/server/routes.go` - Add wallet handler and route
-- [ ] `internal/tokens/token_service_test.go` - TokenService tests (end of phase)
+- [ ] Update `internal/tokens/service_test.go` - Update tests for TokenService (end of phase)
 
 **Implementation Tasks:**
 
-1. **TokenService Creation** (30 min) 🟡
+1. **Service Refactoring to TokenService** (30 min) 🟡
 
-   - [ ] Create `TokenService` struct wrapping existing `BalanceService`
-   - [ ] Implement `NewTokenService(httpClient)` constructor using `tokens.NewConfig()`
-   - [ ] Add `GetWalletBalances(ctx, wallet)` method with strict error handling
-   - [ ] Prepare structure for future price integration (Block C)
+   - [ ] Rename `BalanceService` to `TokenService` in existing `service.go`
+   - [ ] Rename `NewBalanceService()` to `NewTokenService()` constructor
+   - [ ] Keep existing `GetBalances()` method as `GetWalletBalances()` with strict error handling
+   - [ ] Maintain all existing functionality while preparing for Block C integration
 
 2. **Server Integration & Service Bootstrap** (45 min) 🟡
 
@@ -469,8 +469,8 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
   - [x] `ata.go`, `ata_test.go`, `validation.go`, `validation_test.go`, `testdata/golden_atas.json`
 - [x] **B3: 4 files** ✅
   - [x] `service.go`, `service_test.go`, `parser.go`, `parser_test.go`
-- [ ] **B4: 2 files** 🟡
-  - [ ] `internal/tokens/token_service.go`, `internal/tokens/token_service_test.go`
+- [ ] **B4: 0 new files** (refactoring existing) 🟡
+  - [ ] Refactor existing `service.go` and `service_test.go` to use TokenService
 - [ ] **Integration: 2 files** 🟡
   - [ ] Update `internal/server/server.go` (add TokenService)
   - [ ] Update `internal/server/routes.go` (add handler and route)
