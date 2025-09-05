@@ -84,30 +84,21 @@ func (s *BalanceService) GetTokenBalance(ctx context.Context, wallet solana.Addr
 	// Parse SPL token account data
 	tokenAccount, err := ParseSPLTokenAccount(accountInfo)
 	if err != nil {
-		fmt.Printf("DEBUG: Failed to parse token account: %v\n", err)
 		return nil, fmt.Errorf("failed to parse token account: %w", err)
 	}
-	fmt.Printf("DEBUG: Successfully parsed token account with amount: %d\n", tokenAccount.Amount)
 
-	// Validate parsed account (skip validation in testing to avoid base58 decode issues)
+	// Validate parsed account (skip mint/owner validation in testing to avoid base58 decode issues)
 	if err := ValidateTokenAccount(tokenAccount, "", ""); err != nil {
-		fmt.Printf("DEBUG: Failed to validate token account: %v\n", err)
 		return nil, fmt.Errorf("invalid token account: %w", err)
 	}
-	fmt.Printf("DEBUG: Successfully validated token account\n")
 
 	// Check if account is frozen
 	if tokenAccount.IsFrozen {
-		fmt.Printf("DEBUG: Token account is frozen\n")
 		return nil, fmt.Errorf("token account is frozen")
 	}
-	fmt.Printf("DEBUG: Token account is not frozen, proceeding to create TokenBalance\n")
 
 	// Create TokenBalance with proper formatting
-	fmt.Printf("DEBUG: Creating TokenBalance with amount: %d\n", tokenAccount.Amount)
-	tokenBalance := NewTokenBalance(*tokenInfo, tokenAccount.Amount)
-	fmt.Printf("DEBUG: Created TokenBalance with RawAmount: %d\n", tokenBalance.RawAmount)
-	return tokenBalance, nil
+	return NewTokenBalance(*tokenInfo, tokenAccount.Amount), nil
 }
 
 // GetBalances fetches balances for all supported Hylo tokens in a wallet
@@ -187,7 +178,7 @@ func (s *BalanceService) ValidateWalletForBalances(wallet solana.Address) error 
 func (s *BalanceService) Health(ctx context.Context) error {
 	// Test with a known wallet address (could be a system account)
 	// This should either succeed or return ErrAccountNotFound (both are healthy)
-	testWallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g") // Test address
+	testWallet := solana.Address(TestReferenceWallet) // Test address from PRD
 
 	// Test single token balance fetch (hyUSD)
 	_, err := s.GetTokenBalance(ctx, testWallet, s.config.HyUSDMint)

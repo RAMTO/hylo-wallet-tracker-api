@@ -117,7 +117,7 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
 
-	validWallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	validWallet := solana.Address(TestReferenceWallet)
 	hyUSDMint := config.HyUSDMint
 
 	// Create ATA address for testing
@@ -203,7 +203,7 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 		{
 			name:        "Unsupported mint",
 			wallet:      validWallet,
-			mint:        "8NmnwkuHr6mwegkxeU26LnHym7M2g1KWk8CzdDmNkLT6",
+			mint:        TestUnsupportedMint,
 			setupMock:   func(m *MockHTTPClient) {},
 			wantErr:     true,
 			errContains: "unsupported token mint",
@@ -214,7 +214,7 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 			mint:   hyUSDMint,
 			setupMock: func(m *MockHTTPClient) {
 				m.SetAccount(ataAddress, &solana.AccountInfo{
-					Owner: "WrongProgramID111111111111111111111111",
+					Owner: TestInvalidProgramID,
 					Data:  make([]byte, 165),
 				})
 			},
@@ -259,7 +259,7 @@ func TestBalanceService_GetBalances(t *testing.T) {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
 
-	validWallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	validWallet := solana.Address(TestReferenceWallet)
 
 	// Setup ATAs for all tokens
 	hyUSDMint := config.HyUSDMint
@@ -468,7 +468,7 @@ func TestBalanceService_ValidateWalletForBalances(t *testing.T) {
 	}{
 		{
 			name:    "Valid wallet",
-			wallet:  "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+			wallet:  TestReferenceWallet,
 			wantErr: false,
 		},
 		{
@@ -520,7 +520,7 @@ func TestBalanceService_Health(t *testing.T) {
 		{
 			name: "Unhealthy - network error",
 			setupMock: func(m *MockHTTPClient) {
-				testWallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g") // Same address as service uses
+				testWallet := solana.Address(TestReferenceWallet) // Same address as service uses
 				ata, _ := DeriveAssociatedTokenAddress(testWallet, config.HyUSDMint)
 				m.SetError(ata, errors.New("network timeout"))
 			},

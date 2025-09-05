@@ -10,8 +10,8 @@ import (
 func TestSanitizeAddress(t *testing.T) {
 	t.Run("valid addresses", func(t *testing.T) {
 		validAddresses := []string{
-			"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-			"11111111111111111111111111111111111111111111",
+			TestReferenceWallet,
+			TestSystemWallet,
 			"5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
 			"HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
 			"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
@@ -34,10 +34,10 @@ func TestSanitizeAddress(t *testing.T) {
 			input    string
 			expected string
 		}{
-			{" A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"},
-			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g ", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"},
-			{" A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g ", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"},
-			{"\tA3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g\n", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"},
+			{" " + TestReferenceWallet, TestReferenceWallet},
+			{TestReferenceWallet + " ", TestReferenceWallet},
+			{" " + TestReferenceWallet + " ", TestReferenceWallet},
+			{"\t" + TestReferenceWallet + "\n", TestReferenceWallet},
 		}
 
 		for _, tc := range testCases {
@@ -59,7 +59,7 @@ func TestSanitizeAddress(t *testing.T) {
 		}{
 			{"", "empty address"},
 			{"short", "too short"},
-			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6gTOOLONG", "too long"},
+			{TestReferenceWallet + "TOOLONG", "too long"},
 			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc0g", "contains invalid character '0'"},
 			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDycIg", "contains invalid character 'I'"},
 			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDycOg", "contains invalid character 'O'"},
@@ -88,8 +88,8 @@ func TestSanitizeAddress(t *testing.T) {
 func TestValidateWalletAddress(t *testing.T) {
 	t.Run("valid wallet addresses", func(t *testing.T) {
 		validAddresses := []string{
-			"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-			"11111111111111111111111111111111111111111111",
+			TestReferenceWallet,
+			TestSystemWallet,
 		}
 
 		for _, addr := range validAddresses {
@@ -103,7 +103,7 @@ func TestValidateWalletAddress(t *testing.T) {
 		invalidAddresses := []string{
 			"",
 			"short",
-			"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6gTOOLONG",
+			TestReferenceWallet + "TOOLONG",
 			"invalid-characters-here-123456789012345678",
 		}
 
@@ -176,8 +176,8 @@ func TestValidateATAAddress(t *testing.T) {
 	t.Run("valid ATA addresses", func(t *testing.T) {
 		// Use known addresses as examples of valid format
 		validATAs := []string{
-			"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-			"11111111111111111111111111111111111111111111",
+			TestReferenceWallet,
+			TestSystemWallet,
 			"5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
 		}
 
@@ -204,7 +204,7 @@ func TestValidateATAAddress(t *testing.T) {
 }
 
 func TestValidateATADerivation(t *testing.T) {
-	wallet := "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"
+	wallet := TestReferenceWallet
 	mint := string(HyUSDMint)
 
 	t.Run("correct ATA derivation", func(t *testing.T) {
@@ -248,8 +248,8 @@ func TestValidateATADerivation(t *testing.T) {
 			name   string
 		}{
 			{"invalid", wallet, mint, "invalid ATA"},
-			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", "invalid", mint, "invalid wallet"},
-			{"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", wallet, "invalid", "invalid mint"},
+			{TestReferenceWallet, "invalid", mint, "invalid wallet"},
+			{TestReferenceWallet, wallet, "invalid", "invalid mint"},
 		}
 
 		for _, tc := range testCases {
@@ -286,10 +286,10 @@ func TestIsValidBase58Character(t *testing.T) {
 func TestValidateAddressBatch(t *testing.T) {
 	t.Run("mixed valid and invalid addresses", func(t *testing.T) {
 		addresses := []string{
-			"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", // valid
-			"invalid", // invalid
-			"11111111111111111111111111111111111111111111", // valid
-			"", // invalid
+			TestReferenceWallet, // valid
+			"invalid",           // invalid
+			TestSystemWallet,    // valid
+			"",                  // invalid
 			"5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // valid
 		}
 
@@ -336,7 +336,7 @@ func TestSuggestCorrection(t *testing.T) {
 	})
 
 	t.Run("too long address", func(t *testing.T) {
-		long := "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6gTOOLONG"
+		long := TestReferenceWallet + "TOOLONG"
 		suggestions := SuggestCorrection(long)
 
 		if len(suggestions) == 0 {
@@ -356,7 +356,7 @@ func TestSuggestCorrection(t *testing.T) {
 	})
 
 	t.Run("address with whitespace", func(t *testing.T) {
-		withSpace := " A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g "
+		withSpace := " " + TestReferenceWallet + " "
 		suggestions := SuggestCorrection(withSpace)
 
 		found := false

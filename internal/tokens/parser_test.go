@@ -69,7 +69,7 @@ func TestParseSPLTokenAccount(t *testing.T) {
 		{
 			name: "Wrong owner",
 			accountInfo: &solana.AccountInfo{
-				Owner: "WrongProgramID111111111111111111111111",
+				Owner: TestInvalidProgramID,
 				Data:  createValidTokenAccountData(),
 			},
 			wantErr:     true,
@@ -119,7 +119,7 @@ func TestParseSPLTokenAccount(t *testing.T) {
 func TestValidateTokenAccount(t *testing.T) {
 	validAccount := &SPLTokenAccount{
 		Mint:          "HyUSDMint1111111111111111111111111111111",
-		Owner:         "WalletOwner111111111111111111111111111111",
+		Owner:         TestOwnerAddress,
 		Amount:        1000000,
 		State:         TokenStateInitialized,
 		IsInitialized: true,
@@ -138,7 +138,7 @@ func TestValidateTokenAccount(t *testing.T) {
 			name:          "Valid account",
 			account:       validAccount,
 			expectedMint:  "HyUSDMint1111111111111111111111111111111",
-			expectedOwner: "WalletOwner111111111111111111111111111111",
+			expectedOwner: TestOwnerAddress,
 			wantErr:       false,
 		},
 		{
@@ -230,14 +230,14 @@ func TestSPLTokenAccountMethods(t *testing.T) {
 
 	t.Run("String", func(t *testing.T) {
 		account := &SPLTokenAccount{
-			Mint:   "TestMint1111111111111111111111111111111",
-			Owner:  "TestOwner111111111111111111111111111111",
+			Mint:   TestMintAddress,
+			Owner:  TestOwnerAddress,
 			Amount: 1000,
 			State:  TokenStateInitialized,
 		}
 
 		str := account.String()
-		if !contains(str, "TestMint") || !contains(str, "TestOwner") || !contains(str, "1000") {
+		if !contains(str, TestMintAddress) || !contains(str, TestOwnerAddress) || !contains(str, "1000") {
 			t.Errorf("String representation missing expected components: %s", str)
 		}
 	})

@@ -6,7 +6,7 @@ alwaysApply: true
 
 - Always use example.env as the template for environment variables, add new variables in this file
 - Always ensure the project builds successfully and tests pass with at least 80% coverage before committing
-- Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates
+- Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates and try to not use magic numbers (if possible)
 - Before starting any feature, review the @docs folder thoroughly - read the PRD, architecture, and current plan to understand context and avoid duplicating work
 - Always write consice and easy to read code
 - No not add trivial comments, add only if needed
@@ -18,3 +18,4 @@ alwaysApply: true
   - Configure different base URLs for different environments
   - Add environment-specific examples
   - Document RPC endpoint dependencies
+- When writing tests, use or add constant, do not use magic numbers

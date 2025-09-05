@@ -25,9 +25,9 @@ func TestTokenConstants(t *testing.T) {
 
 	t.Run("token mint addresses match documentation", func(t *testing.T) {
 		// Verify against known addresses from Hylo documentation
-		expectedHyUSD := "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E"
-		expectedSHyUSD := "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz"
-		expectedXSOL := "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs"
+		expectedHyUSD := string(HyUSDMint)
+		expectedSHyUSD := string(SHyUSDMint)
+		expectedXSOL := string(XSOLMint)
 
 		if string(HyUSDMint) != expectedHyUSD {
 			t.Errorf("HyUSDMint mismatch: expected %s, got %s", expectedHyUSD, HyUSDMint)
@@ -360,7 +360,7 @@ func TestParseDecimalAmount(t *testing.T) {
 }
 
 func TestWalletBalances(t *testing.T) {
-	testWallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	testWallet := solana.Address(TestReferenceWallet)
 	testSlot := solana.Slot(12345)
 
 	t.Run("wallet balances creation", func(t *testing.T) {

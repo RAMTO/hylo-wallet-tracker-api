@@ -76,7 +76,6 @@ func ParseSPLTokenAccount(accountInfo *solana.AccountInfo) (*SPLTokenAccount, er
 
 	// Extract amount (bytes 64-71, little-endian u64)
 	amount := binary.LittleEndian.Uint64(accountInfo.Data[AmountOffset : AmountOffset+8])
-	fmt.Printf("DEBUG: Parsed amount from account data: %d (bytes %v)\n", amount, accountInfo.Data[AmountOffset:AmountOffset+8])
 
 	// Extract state (byte 108)
 	state := accountInfo.Data[StateOffset]

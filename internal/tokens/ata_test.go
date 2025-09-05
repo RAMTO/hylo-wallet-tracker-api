@@ -37,7 +37,7 @@ type GoldenTestData struct {
 func TestDeriveAssociatedTokenAddress(t *testing.T) {
 	t.Run("basic ATA derivation", func(t *testing.T) {
 		// Test with known addresses
-		wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+		wallet := solana.Address(TestReferenceWallet)
 		mint := HyUSDMint
 
 		ata, err := DeriveAssociatedTokenAddress(wallet, mint)
@@ -64,7 +64,7 @@ func TestDeriveAssociatedTokenAddress(t *testing.T) {
 
 	t.Run("deterministic derivation", func(t *testing.T) {
 		// Same inputs should always produce same output
-		wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+		wallet := solana.Address(TestReferenceWallet)
 		mint := XSOLMint
 
 		ata1, err1 := DeriveAssociatedTokenAddress(wallet, mint)
@@ -84,7 +84,7 @@ func TestDeriveAssociatedTokenAddress(t *testing.T) {
 	})
 
 	t.Run("different tokens produce different ATAs", func(t *testing.T) {
-		wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+		wallet := solana.Address(TestReferenceWallet)
 
 		hyusdATA, err := DeriveAssociatedTokenAddress(wallet, HyUSDMint)
 		if err != nil {
@@ -102,8 +102,8 @@ func TestDeriveAssociatedTokenAddress(t *testing.T) {
 	})
 
 	t.Run("different wallets produce different ATAs", func(t *testing.T) {
-		wallet1 := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
-		wallet2 := solana.Address("11111111111111111111111111111111111111111111")
+		wallet1 := solana.Address(TestReferenceWallet)
+		wallet2 := solana.Address(TestSystemWallet)
 
 		ata1, err := DeriveAssociatedTokenAddress(wallet1, HyUSDMint)
 		if err != nil {
@@ -130,7 +130,7 @@ func TestDeriveAssociatedTokenAddress(t *testing.T) {
 	})
 
 	t.Run("invalid mint address", func(t *testing.T) {
-		wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+		wallet := solana.Address(TestReferenceWallet)
 		invalidMint := solana.Address("invalid")
 
 		_, err := DeriveAssociatedTokenAddress(wallet, invalidMint)
@@ -142,7 +142,7 @@ func TestDeriveAssociatedTokenAddress(t *testing.T) {
 
 func TestGetWalletATAs(t *testing.T) {
 	config := NewConfig()
-	wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	wallet := solana.Address(TestReferenceWallet)
 
 	t.Run("get all wallet ATAs", func(t *testing.T) {
 		atas, err := GetWalletATAs(wallet, config)
@@ -201,7 +201,7 @@ func TestGetWalletATAs(t *testing.T) {
 
 func TestGetWalletATAForToken(t *testing.T) {
 	config := NewConfig()
-	wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	wallet := solana.Address(TestReferenceWallet)
 
 	t.Run("get ATA for specific token", func(t *testing.T) {
 		ata, err := GetWalletATAForToken(wallet, HyUSDSymbol, config)
@@ -237,7 +237,7 @@ func TestGetWalletATAForToken(t *testing.T) {
 func TestATADeterminism(t *testing.T) {
 	// Test that our ATA derivation is deterministic across multiple runs
 	config := NewConfig()
-	wallet := solana.Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g")
+	wallet := solana.Address(TestReferenceWallet)
 
 	t.Run("multiple derivations produce same results", func(t *testing.T) {
 		results := make([]map[string]solana.Address, 5)
@@ -266,7 +266,7 @@ func TestATADeterminism(t *testing.T) {
 func TestCryptoUtilityFunctions(t *testing.T) {
 	t.Run("base58 encode/decode round trip", func(t *testing.T) {
 		// Test with known Solana address
-		original := "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"
+		original := TestReferenceWallet
 
 		// Decode to bytes
 		bytes, err := decodeBase58(original)
@@ -359,11 +359,11 @@ func TestGenerateGoldenVectors(t *testing.T) {
 			wallet string
 			symbol string
 		}{
-			{"Reference Wallet - hyUSD", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", "hyUSD"},
-			{"Reference Wallet - sHYUSD", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", "sHYUSD"},
-			{"Reference Wallet - xSOL", "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", "xSOL"},
-			{"System Wallet - hyUSD", "11111111111111111111111111111111111111111111", "hyUSD"},
-			{"System Wallet - xSOL", "11111111111111111111111111111111111111111111", "xSOL"},
+			{"Reference Wallet - hyUSD", TestReferenceWallet, "hyUSD"},
+			{"Reference Wallet - sHYUSD", TestReferenceWallet, "sHYUSD"},
+			{"Reference Wallet - xSOL", TestReferenceWallet, "xSOL"},
+			{"System Wallet - hyUSD", TestSystemWallet, "hyUSD"},
+			{"System Wallet - xSOL", TestSystemWallet, "xSOL"},
 		}
 
 		for _, tc := range testCases {

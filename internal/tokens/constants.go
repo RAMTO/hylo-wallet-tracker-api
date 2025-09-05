@@ -10,6 +10,14 @@ const (
 	// SPLTokenProgramID is the official SPL Token Program on Solana mainnet-beta
 	// This program manages all SPL token accounts and operations
 	SPLTokenProgramID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+
+	// AssociatedTokenProgramID is the official Associated Token Program on Solana
+	// This program manages Associated Token Account (ATA) creation and management
+	AssociatedTokenProgramID = "ATokenGqhhm39XWKyoU9QkZJhbT5gTcfA5q3eHpDG7d"
+
+	// SystemProgramID is the system program that manages account creation and transfers
+	SystemProgramID = "11111111111111111111111111111111"
+
 	// TokenDecimals defines the decimal precision for each token
 	// Based on Solana SPL token standards and Hylo protocol specifications
 	HyUSDDecimals  = 6 // Standard stablecoin precision (6 decimals)

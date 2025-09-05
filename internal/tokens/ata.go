@@ -9,12 +9,8 @@ import (
 	"hylo-wallet-tracker-api/internal/solana"
 )
 
-// Solana program IDs for ATA derivation
+// ATA derivation constants
 const (
-	// Associated Token Program ID (using valid 44-character address for testing)
-	// In production, this should be the real Associated Token program ID
-	AssociatedTokenProgramID = "ATokenGqhhm39XWKyoU9QkZJhbT5gTcfA5q3eHpDG7d"
-
 	// PDA seed string used in ATA derivation
 	PDASeeded = "ProgramDerivedAddress"
 
