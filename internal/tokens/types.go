@@ -48,8 +48,8 @@ func (ti *TokenInfo) Validate() error {
 
 // TokenBalance represents a token balance with formatting utilities
 type TokenBalance struct {
-	// TokenInfo contains the token metadata
-	TokenInfo TokenInfo `json:"token_info"`
+	// TokenInfo contains the token metadata (not exported in JSON)
+	TokenInfo TokenInfo `json:"-"`
 
 	// RawAmount is the raw token amount as stored on-chain (without decimal adjustment)
 	RawAmount uint64 `json:"raw_amount"`

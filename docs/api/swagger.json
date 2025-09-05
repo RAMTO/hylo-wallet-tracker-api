@@ -53,6 +53,125 @@
                     }
                 }
             }
+        },
+        "/wallet/{address}/balances": {
+            "get": {
+                "description": "Fetch balances for hyUSD, sHYUSD, and xSOL tokens for a specific wallet address",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Get wallet token balances",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet address (base58 encoded)",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wallet token balances",
+                        "schema": {
+                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_tokens.WalletBalances"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid wallet address",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch balances",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "hylo-wallet-tracker-api_internal_tokens.TokenBalance": {
+            "type": "object",
+            "properties": {
+                "decimal_amount": {
+                    "description": "DecimalAmount is the human-readable amount adjusted for token decimals",
+                    "type": "string"
+                },
+                "raw_amount": {
+                    "description": "RawAmount is the raw token amount as stored on-chain (without decimal adjustment)",
+                    "type": "integer"
+                },
+                "token_info": {
+                    "description": "TokenInfo contains the token metadata",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenInfo"
+                        }
+                    ]
+                },
+                "usd_value": {
+                    "description": "USDValue is the USD value of this token balance (optional, for display)",
+                    "type": "number"
+                }
+            }
+        },
+        "hylo-wallet-tracker-api_internal_tokens.TokenInfo": {
+            "type": "object",
+            "properties": {
+                "decimals": {
+                    "description": "Decimals is the number of decimal places for this token",
+                    "type": "integer"
+                },
+                "mint": {
+                    "description": "Mint is the Solana mint address for this token",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name is the human-readable display name",
+                    "type": "string"
+                },
+                "symbol": {
+                    "description": "Symbol is the short identifier (e.g., \"hyUSD\", \"xSOL\")",
+                    "type": "string"
+                }
+            }
+        },
+        "hylo-wallet-tracker-api_internal_tokens.WalletBalances": {
+            "type": "object",
+            "properties": {
+                "balances": {
+                    "description": "Balances is a map of token symbol to token balance",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenBalance"
+                    }
+                },
+                "slot": {
+                    "description": "Slot is the Solana slot when these balances were fetched",
+                    "type": "integer"
+                },
+                "total_usd_value": {
+                    "description": "TotalUSDValue is the sum of all token balances in USD (optional)",
+                    "type": "number"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt is the timestamp when these balances were last updated",
+                    "type": "string"
+                },
+                "wallet": {
+                    "description": "Wallet is the wallet address these balances belong to",
+                    "type": "string"
+                }
+            }
         }
     }
 }

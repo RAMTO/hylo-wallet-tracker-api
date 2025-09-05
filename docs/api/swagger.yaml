@@ -1,6 +1,61 @@
 basePath: /
 consumes:
 - application/json
+definitions:
+  hylo-wallet-tracker-api_internal_tokens.TokenBalance:
+    properties:
+      decimal_amount:
+        description: DecimalAmount is the human-readable amount adjusted for token
+          decimals
+        type: string
+      raw_amount:
+        description: RawAmount is the raw token amount as stored on-chain (without
+          decimal adjustment)
+        type: integer
+      token_info:
+        allOf:
+        - $ref: '#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenInfo'
+        description: TokenInfo contains the token metadata
+      usd_value:
+        description: USDValue is the USD value of this token balance (optional, for
+          display)
+        type: number
+    type: object
+  hylo-wallet-tracker-api_internal_tokens.TokenInfo:
+    properties:
+      decimals:
+        description: Decimals is the number of decimal places for this token
+        type: integer
+      mint:
+        description: Mint is the Solana mint address for this token
+        type: string
+      name:
+        description: Name is the human-readable display name
+        type: string
+      symbol:
+        description: Symbol is the short identifier (e.g., "hyUSD", "xSOL")
+        type: string
+    type: object
+  hylo-wallet-tracker-api_internal_tokens.WalletBalances:
+    properties:
+      balances:
+        additionalProperties:
+          $ref: '#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenBalance'
+        description: Balances is a map of token symbol to token balance
+        type: object
+      slot:
+        description: Slot is the Solana slot when these balances were fetched
+        type: integer
+      total_usd_value:
+        description: TotalUSDValue is the sum of all token balances in USD (optional)
+        type: number
+      updated_at:
+        description: UpdatedAt is the timestamp when these balances were last updated
+        type: string
+      wallet:
+        description: Wallet is the wallet address these balances belong to
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -34,6 +89,36 @@ paths:
       summary: Health check endpoint
       tags:
       - health
+  /wallet/{address}/balances:
+    get:
+      description: Fetch balances for hyUSD, sHYUSD, and xSOL tokens for a specific
+        wallet address
+      parameters:
+      - description: Wallet address (base58 encoded)
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wallet token balances
+          schema:
+            $ref: '#/definitions/hylo-wallet-tracker-api_internal_tokens.WalletBalances'
+        "400":
+          description: Invalid wallet address
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch balances
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get wallet token balances
+      tags:
+      - wallet
 produces:
 - application/json
 schemes:

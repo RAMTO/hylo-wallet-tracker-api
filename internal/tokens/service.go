@@ -8,9 +8,9 @@ import (
 	"hylo-wallet-tracker-api/internal/solana"
 )
 
-// BalanceService provides token balance fetching functionality
+// TokenService provides token balance fetching functionality
 // Integrates with Solana HTTP client, ATA derivation, and SPL token parsing
-type BalanceService struct {
+type TokenService struct {
 	// httpClient is the Solana HTTP RPC client for on-chain data fetching
 	httpClient HTTPClientInterface
 	// config provides token configuration and registry functionality
@@ -23,11 +23,11 @@ type HTTPClientInterface interface {
 	GetAccount(ctx context.Context, address solana.Address, commitment solana.Commitment) (*solana.AccountInfo, error)
 }
 
-// NewBalanceService creates a new balance service with dependency injection
+// NewTokenService creates a new token service with dependency injection
 // Parameters:
 //   - httpClient: Solana HTTP client for RPC calls
 //   - config: Token configuration and registry
-func NewBalanceService(httpClient HTTPClientInterface, config *Config) (*BalanceService, error) {
+func NewTokenService(httpClient HTTPClientInterface, config *Config) (*TokenService, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient cannot be nil")
 	}
@@ -40,7 +40,7 @@ func NewBalanceService(httpClient HTTPClientInterface, config *Config) (*Balance
 		return nil, fmt.Errorf("invalid token config: %w", err)
 	}
 
-	return &BalanceService{
+	return &TokenService{
 		httpClient: httpClient,
 		config:     config,
 	}, nil
@@ -48,7 +48,7 @@ func NewBalanceService(httpClient HTTPClientInterface, config *Config) (*Balance
 
 // GetTokenBalance fetches the balance for a specific token in a wallet
 // Returns TokenBalance with formatted amount or zero balance if account doesn't exist
-func (s *BalanceService) GetTokenBalance(ctx context.Context, wallet solana.Address, mint solana.Address) (*TokenBalance, error) {
+func (s *TokenService) GetTokenBalance(ctx context.Context, wallet solana.Address, mint solana.Address) (*TokenBalance, error) {
 	// Validate wallet address
 	if err := wallet.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid wallet address: %w", err)
@@ -101,9 +101,9 @@ func (s *BalanceService) GetTokenBalance(ctx context.Context, wallet solana.Addr
 	return NewTokenBalance(*tokenInfo, tokenAccount.Amount), nil
 }
 
-// GetBalances fetches balances for all supported Hylo tokens in a wallet
+// GetWalletBalances fetches balances for all supported Hylo tokens in a wallet
 // Returns WalletBalances with all token balances, including zero balances
-func (s *BalanceService) GetBalances(ctx context.Context, wallet solana.Address) (*WalletBalances, error) {
+func (s *TokenService) GetWalletBalances(ctx context.Context, wallet solana.Address) (*WalletBalances, error) {
 	// Validate wallet address
 	if err := wallet.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid wallet address: %w", err)
@@ -154,12 +154,12 @@ func (s *BalanceService) GetBalances(ctx context.Context, wallet solana.Address)
 }
 
 // GetSupportedTokens returns a list of all supported token information
-func (s *BalanceService) GetSupportedTokens() []*TokenInfo {
+func (s *TokenService) GetSupportedTokens() []*TokenInfo {
 	return s.config.GetSupportedTokens()
 }
 
 // ValidateWalletForBalances performs comprehensive wallet validation before balance fetching
-func (s *BalanceService) ValidateWalletForBalances(wallet solana.Address) error {
+func (s *TokenService) ValidateWalletForBalances(wallet solana.Address) error {
 	// Basic address validation
 	if err := wallet.Validate(); err != nil {
 		return fmt.Errorf("invalid wallet address format: %w", err)
@@ -173,9 +173,9 @@ func (s *BalanceService) ValidateWalletForBalances(wallet solana.Address) error 
 	return nil
 }
 
-// Health performs a health check on the balance service
+// Health performs a health check on the token service
 // Tests connectivity and basic functionality with minimal overhead
-func (s *BalanceService) Health(ctx context.Context) error {
+func (s *TokenService) Health(ctx context.Context) error {
 	// Test with a known wallet address (could be a system account)
 	// This should either succeed or return ErrAccountNotFound (both are healthy)
 	testWallet := solana.Address(TestReferenceWallet) // Test address from PRD

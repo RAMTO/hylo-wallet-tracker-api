@@ -3,8 +3,9 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/gagliardetto/solana-go"
 	solanainternal "hylo-wallet-tracker-api/internal/solana"
+
+	"github.com/gagliardetto/solana-go"
 )
 
 // ATA derivation constants

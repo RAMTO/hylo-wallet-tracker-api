@@ -1,0 +1,10 @@
+✅ Solana service created successfully
+✅ Token service created successfully
+🚀 Server is running on http://localhost:8080
+📖 Swagger documentation is available at http://localhost:8080/swagger/index.html
+panic: http server error: listen tcp :8080: bind: address already in use
+
+goroutine 1 [running]:
+main.main()
+	/Users/martindobrev/Code/Solana/hylo-wallet-tracker-api/cmd/api/main.go:68 +0x210
+exit status 2

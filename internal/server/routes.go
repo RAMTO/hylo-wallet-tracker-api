@@ -9,6 +9,9 @@ import (
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	"hylo-wallet-tracker-api/internal/solana"
+	_ "hylo-wallet-tracker-api/internal/tokens" // Required for swagger type generation
+
 	_ "hylo-wallet-tracker-api/docs/api" // This line is important for swagger to work
 )
 
@@ -26,6 +29,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Health endpoint
 	r.Get("/health", s.handleHealth)
+
+	// Wallet endpoints
+	r.Route("/wallet", func(r chi.Router) {
+		r.Get("/{address}/balances", s.handleWalletBalances)
+	})
 
 	// Swagger documentation endpoint
 	r.Get("/swagger/*", httpSwagger.Handler(
@@ -60,4 +68,51 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+// handleWalletBalances returns token balances for a specific wallet
+// @Summary Get wallet token balances
+// @Description Fetch balances for hyUSD, sHYUSD, and xSOL tokens for a specific wallet address
+// @Tags wallet
+// @Param address path string true "Wallet address (base58 encoded)"
+// @Produce json
+// @Success 200 {object} tokens.WalletBalances "Wallet token balances"
+// @Failure 400 {object} map[string]interface{} "Invalid wallet address"
+// @Failure 500 {object} map[string]interface{} "Failed to fetch balances"
+// @Router /wallet/{address}/balances [get]
+func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract wallet address from URL path
+	addressStr := chi.URLParam(r, "address")
+	if addressStr == "" {
+		http.Error(w, `{"error": "wallet address is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Parse and validate wallet address
+	wallet := solana.Address(addressStr)
+	if err := wallet.Validate(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Invalid wallet address format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Fetch wallet balances using token service
+	// This implements strict error handling - all tokens must succeed
+	balances, err := s.tokenService.GetWalletBalances(r.Context(), wallet)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Failed to fetch wallet balances",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return direct WalletBalances JSON response (Option A format)
+	json.NewEncoder(w).Encode(balances)
 }

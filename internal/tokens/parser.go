@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gagliardetto/solana-go"
 	solanainternal "hylo-wallet-tracker-api/internal/solana"
+
+	"github.com/gagliardetto/solana-go"
 )
 
 // SPL Token Account Layout Constants
