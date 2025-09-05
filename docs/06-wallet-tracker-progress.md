@@ -378,58 +378,62 @@ Implements Hylo token handling, ATA derivation, and multi-token balance fetching
 - [x] Tests achieve >90% coverage with existing error handling patterns **(>95%)** ✅
 - [x] Performance suitable for real-time API responses ✅
 
-### **Phase B4: API Integration & Response Formatting** _(Depends on B3 & existing server - 2-3 hours)_
+### **Phase B4: API Integration & Token Service** _(Depends on B3 & existing server - 2-3 hours)_
 
 **Deliverables:**
 
 - [ ] REST endpoint `GET /wallet/:address/balances`
-- [ ] JSON response formatting with proper structure
-- [ ] Error handling and validation
+- [ ] TokenService wrapper for future extensibility (Block C preparation)
+- [ ] Direct WalletBalances JSON response (no API wrapper)
+- [ ] Strict error handling (all tokens must succeed)
 - [ ] Integration with existing server routes
 
 **Components:**
 
-- [ ] `handlers.go` - HTTP handlers for balance endpoints
-- [ ] `handlers_test.go` - HTTP handler tests
-- [ ] `responses.go` - JSON response structures and formatting
-- [ ] Update `internal/server/routes.go` with new balance route
+- [ ] `internal/tokens/token_service.go` - TokenService wrapper around BalanceService
+- [ ] Update `internal/server/server.go` - Add TokenService to Server struct
+- [ ] Update `internal/server/routes.go` - Add wallet handler and route
+- [ ] `internal/tokens/token_service_test.go` - TokenService tests (end of phase)
 
 **Implementation Tasks:**
 
-1. **HTTP Handler Implementation** (1 hour) 🟡
+1. **TokenService Creation** (30 min) 🟡
 
-   - [ ] Implement `GetWalletBalances(c *fiber.Ctx)` handler
-   - [ ] Extract wallet address as `solana.Address`, use existing validation
-   - [ ] Call balance service and handle errors using existing patterns
-   - [ ] Return properly formatted JSON response
+   - [ ] Create `TokenService` struct wrapping existing `BalanceService`
+   - [ ] Implement `NewTokenService(httpClient)` constructor using `tokens.NewConfig()`
+   - [ ] Add `GetWalletBalances(ctx, wallet)` method with strict error handling
+   - [ ] Prepare structure for future price integration (Block C)
 
-2. **Response Formatting & Structure** (45 min) 🟡
+2. **Server Integration & Service Bootstrap** (45 min) 🟡
 
-   - [ ] Define API response structure matching architecture spec
-   - [ ] Include slot number and timestamp for freshness tracking
-   - [ ] Format token balances with appropriate decimal places
-   - [ ] Add metadata fields (updated_at, slot, etc.)
+   - [ ] Add `tokenService *tokens.TokenService` to Server struct
+   - [ ] Initialize TokenService in `NewServer()` using `solanaService.GetHTTPClient()`
+   - [ ] Follow existing dependency injection pattern (like `solanaService`)
+   - [ ] Validate TokenService creation and configuration loading
 
-3. **Server Integration & Routing** (45 min) 🟡
+3. **HTTP Handler & Route Implementation** (1 hour) 🟡
 
-   - [ ] Add balance route to existing `internal/server/routes.go`
-   - [ ] Initialize balance service using `solana.Service.GetHTTPClient()`
-   - [ ] Add proper middleware (rate limiting, CORS) using existing patterns
-   - [ ] Update server startup to initialize balance service with Solana dependency
+   - [ ] Add `handleWalletBalances(w http.ResponseWriter, r *http.Request)` to Server
+   - [ ] Extract wallet address using `chi.URLParam()` (not fiber)
+   - [ ] Call `tokenService.GetWalletBalances()` with strict error handling
+   - [ ] Return direct `WalletBalances` JSON response (Option A format)
+   - [ ] Add route `/wallet/{address}/balances` using chi router patterns
 
 4. **Testing & Validation** (30 min) 🟡
+   - [ ] Unit tests for TokenService wrapper functionality
    - [ ] HTTP integration tests for balance endpoint
-   - [ ] Test invalid wallet address handling
-   - [ ] Test response format compliance
-   - [ ] Validate against reference wallet balances
+   - [ ] Test invalid wallet address handling (400 errors)
+   - [ ] Test RPC failures and strict error responses (500 errors)
+   - [ ] Validate response format matches `WalletBalances` struct
 
 **Acceptance Criteria:**
 
-- [ ] `GET /wallet/:address/balances` endpoint functional
-- [ ] Response matches architecture specification format
-- [ ] Proper error handling for invalid addresses
+- [ ] `GET /wallet/{address}/balances` endpoint functional with chi router
+- [ ] Direct `WalletBalances` JSON response (no wrapper)
+- [ ] All three tokens (hyUSD, sHYUSD, xSOL) must succeed or return 500
+- [ ] Invalid addresses return 400 with clear error message
+- [ ] TokenService provides foundation for Block C price integration
 - [ ] Tests achieve >80% coverage
-- [ ] Integration with existing server architecture
 
 ### **Dependencies & Phase Relationships**
 
@@ -457,7 +461,7 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 
 ### **Block B Completion Checklist**
 
-**Files to Create:** _(Total estimated: 12-14 files for Block B)_
+**Files to Create:** _(Total estimated: 12-13 files for Block B)_
 
 - [x] **B1: 4 files** ✅
   - [x] `config.go`, `types.go`, `constants.go`, `config_test.go`
@@ -465,15 +469,16 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
   - [x] `ata.go`, `ata_test.go`, `validation.go`, `validation_test.go`, `testdata/golden_atas.json`
 - [x] **B3: 4 files** ✅
   - [x] `service.go`, `service_test.go`, `parser.go`, `parser_test.go`
-- [ ] **B4: 3 files** 🟡
-  - [ ] `handlers.go`, `handlers_test.go`, `responses.go`
-- [ ] **Integration: 1 file** 🟡
-  - [ ] Update `internal/server/routes.go`
+- [ ] **B4: 2 files** 🟡
+  - [ ] `internal/tokens/token_service.go`, `internal/tokens/token_service_test.go`
+- [ ] **Integration: 2 files** 🟡
+  - [ ] Update `internal/server/server.go` (add TokenService)
+  - [ ] Update `internal/server/routes.go` (add handler and route)
 
 **Key Milestones:**
 
 - [x] **B1 Complete:** Token configuration and types ready ✅
 - [x] **B2 Complete:** ATA derivation working with test vectors ✅
 - [x] **B3 Complete:** Balance service fetching all token balances ✅
-- [ ] **B4 Complete:** API endpoint integrated and functional
+- [ ] **B4 Complete:** TokenService and wallet balance API endpoint functional
 - [ ] **Block B Done:** Wallet balance functionality complete, ready for Block C (Price Engine)
