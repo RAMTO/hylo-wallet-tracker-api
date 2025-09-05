@@ -4,10 +4,17 @@ globs:
 alwaysApply: true
 ---
 
-Always use example.env as the template for environment variables, add new variables in this file
-Always ensure the project builds successfully and tests pass with at least 80% coverage before committing
-Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates
-Before starting any feature, review the @docs folder thoroughly - read the PRD, architecture, and current plan to understand context and avoid duplicating work
-Always write consice and easy to read code
-No not add trivial comments, add only if needed
-When reffering to official documentation, always use the context7 mcp server
+- Always use example.env as the template for environment variables, add new variables in this file
+- Always ensure the project builds successfully and tests pass with at least 80% coverage before committing
+- Before creating new constants, check existing config files, constants directories, and grep the codebase for duplicates
+- Before starting any feature, review the @docs folder thoroughly - read the PRD, architecture, and current plan to understand context and avoid duplicating work
+- Always write consice and easy to read code
+- No not add trivial comments, add only if needed
+- When reffering to official documentation, always use the context7 mcp server
+- After adding or updating new endpoints make sure swagger is updated and the following rules are respected:
+  - Ensure full OpenAPI 3.0 specification compliance
+  - Add proper schema definitions with validation rules
+  - Include parameter constraints (address format, pagination limits)
+  - Configure different base URLs for different environments
+  - Add environment-specific examples
+  - Document RPC endpoint dependencies
