@@ -1,0 +1,42 @@
+basePath: /
+consumes:
+- application/json
+host: localhost:8080
+info:
+  contact:
+    name: API Support
+  description: Read-only REST API for tracking Solana wallet activity and metrics
+    for the Hylo protocol. Provides real-time wallet balances (hyUSD, sHYUSD, xSOL),
+    price data (SOL/USD, xSOL pricing), and transaction history.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Hylo Wallet Tracker API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Check the health and connectivity of the service and Solana RPC
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service is unhealthy - Solana RPC issues
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check endpoint
+      tags:
+      - health
+produces:
+- application/json
+schemes:
+- http
+- https
+swagger: "2.0"

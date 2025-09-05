@@ -30,6 +30,16 @@ docker-down:
 		docker-compose down; \
 	fi
 
+# Generate Swagger documentation
+swagger:
+	@echo "Generating Swagger documentation..."
+	@swag init -g cmd/api/main.go -o docs/api --parseDependency --parseInternal
+
+# Format Swagger annotations
+swagger-fmt:
+	@echo "Formatting Swagger annotations..."
+	@swag fmt
+
 # Test the application
 test:
 	@echo "Testing..."
@@ -61,4 +71,4 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+.PHONY: all build run test clean watch docker-run docker-down itest swagger swagger-fmt

@@ -1,0 +1,10 @@
+# Swagger configuration file
+dir: ./
+generalInfo: ./cmd/api/main.go
+output: ./docs/api
+outputTypes: go,json,yaml
+parseVendor: false
+parseDependency: true
+parseInternal: true
+generatedTime: true
+requiredByDefault: false

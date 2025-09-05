@@ -1,3 +1,18 @@
+// Hylo Wallet Tracker API
+// API for tracking Solana wallet activity and metrics for the Hylo protocol
+//
+// @title Hylo Wallet Tracker API
+// @version 1.0
+// @description Read-only REST API for tracking Solana wallet activity and metrics for the Hylo protocol. Provides real-time wallet balances (hyUSD, sHYUSD, xSOL), price data (SOL/USD, xSOL pricing), and transaction history.
+// @termsOfService http://swagger.io/terms/
+// @contact.name API Support
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+// @produce json
+// @accept json
 package main
 
 import (
@@ -47,6 +62,7 @@ func main() {
 	go gracefulShutdown(server, done)
 
 	log.Printf("Server is running on http://localhost%s", server.Addr)
+	log.Println("Swagger documentation is available at http://localhost:8080/swagger/index.html")
 	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("http server error: %s", err))
