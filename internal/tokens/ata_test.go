@@ -1,11 +1,14 @@
 package tokens
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"os"
 	"testing"
 
 	"hylo-wallet-tracker-api/internal/solana"
+
+	"github.com/mr-tron/base58"
 )
 
 // GoldenTestCase represents a test case for ATA derivation
@@ -32,6 +35,20 @@ type GoldenTestData struct {
 	TestCases           []GoldenTestCase     `json:"test_cases"`
 	ValidationTestCases []ValidationTestCase `json:"validation_test_cases"`
 	Notes               []string             `json:"notes"`
+}
+
+// Test helper functions for ATA tests
+func decodeBase58(s string) ([]byte, error) {
+	return base58.Decode(s)
+}
+
+func encodeBase58(b []byte) string {
+	return base58.Encode(b)
+}
+
+func sha256Hash(data []byte) []byte {
+	hash := sha256.Sum256(data)
+	return hash[:]
 }
 
 func TestDeriveAssociatedTokenAddress(t *testing.T) {

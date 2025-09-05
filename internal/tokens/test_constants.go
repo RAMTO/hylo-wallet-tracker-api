@@ -8,8 +8,8 @@ const (
 	// TestReferenceWallet is the reference wallet address from PRD for consistent testing
 	TestReferenceWallet = "A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"
 
-	// TestSystemWallet is the system wallet address (all 1s) for testing edge cases
-	TestSystemWallet = "11111111111111111111111111111111111111111111"
+	// TestSystemWallet is a second reference wallet address for testing different wallets
+	TestSystemWallet = "B4wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6h"
 
 	// Test mock values for error scenarios and invalid inputs
 	// TestInvalidProgramID is used to test invalid program ID error handling

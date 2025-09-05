@@ -55,7 +55,7 @@ func (m *MockHTTPClient) Reset() {
 	m.errors = make(map[solana.Address]error)
 }
 
-func TestNewBalanceService(t *testing.T) {
+func TestNewTokenService(t *testing.T) {
 	config := NewConfig()
 
 	tests := []struct {
@@ -89,7 +89,7 @@ func TestNewBalanceService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, err := NewBalanceService(tt.httpClient, tt.config)
+			service, err := NewTokenService(tt.httpClient, tt.config)
 
 			if tt.wantErr {
 				if err == nil {
@@ -112,7 +112,7 @@ func TestNewBalanceService(t *testing.T) {
 func TestBalanceService_GetTokenBalance(t *testing.T) {
 	config := NewConfig()
 	mockClient := NewMockHTTPClient()
-	service, err := NewBalanceService(mockClient, config)
+	service, err := NewTokenService(mockClient, config)
 	if err != nil {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestBalanceService_GetTokenBalance(t *testing.T) {
 func TestBalanceService_GetBalances(t *testing.T) {
 	config := NewConfig()
 	mockClient := NewMockHTTPClient()
-	service, err := NewBalanceService(mockClient, config)
+	service, err := NewTokenService(mockClient, config)
 	if err != nil {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestBalanceService_GetBalances(t *testing.T) {
 
 			tt.setupMock(mockClient)
 
-			balances, err := service.GetBalances(context.Background(), tt.wallet)
+			balances, err := service.GetWalletBalances(context.Background(), tt.wallet)
 
 			if tt.wantErr {
 				if err == nil {
@@ -427,7 +427,7 @@ func TestBalanceService_GetBalances(t *testing.T) {
 func TestBalanceService_GetSupportedTokens(t *testing.T) {
 	config := NewConfig()
 	mockClient := NewMockHTTPClient()
-	service, err := NewBalanceService(mockClient, config)
+	service, err := NewTokenService(mockClient, config)
 	if err != nil {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
@@ -455,7 +455,7 @@ func TestBalanceService_GetSupportedTokens(t *testing.T) {
 func TestBalanceService_ValidateWalletForBalances(t *testing.T) {
 	config := NewConfig()
 	mockClient := NewMockHTTPClient()
-	service, err := NewBalanceService(mockClient, config)
+	service, err := NewTokenService(mockClient, config)
 	if err != nil {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
@@ -499,7 +499,7 @@ func TestBalanceService_ValidateWalletForBalances(t *testing.T) {
 func TestBalanceService_Health(t *testing.T) {
 	config := NewConfig()
 	mockClient := NewMockHTTPClient()
-	service, err := NewBalanceService(mockClient, config)
+	service, err := NewTokenService(mockClient, config)
 	if err != nil {
 		t.Fatalf("Failed to create balance service: %v", err)
 	}
