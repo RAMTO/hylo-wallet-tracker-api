@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -14,26 +13,27 @@ import (
 // @Description Check the health and connectivity of the service and Solana RPC
 // @Tags health
 // @Produce json
-// @Success 200 {object} map[string]interface{} "Service is healthy"
-// @Success 503 {object} map[string]interface{} "Service is unhealthy - Solana RPC issues"
+// @Success 200 {object} server.HealthResponse "Service is healthy"
+// @Success 503 {object} server.HealthResponse "Service is unhealthy - Solana RPC issues"
 // @Router /health [get]
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	status := s.solanaService.Health(r.Context())
 
-	response := map[string]interface{}{
-		"status": "ok",
-		"solana": status,
+	response := HealthResponse{
+		Status:    "ok",
+		Solana:    status,
+		Timestamp: getCurrentTimestamp(),
 	}
 
+	statusCode := http.StatusOK
 	// Return 503 if Solana connection is unhealthy
 	if !status.IsHealthy() {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		response["status"] = "unhealthy"
+		response.Status = "unhealthy"
+		statusCode = http.StatusServiceUnavailable
 	}
 
-	json.NewEncoder(w).Encode(response)
+	// Use helper function for consistency while maintaining current response format
+	s.writeJSONSuccessWithCode(w, statusCode, response)
 }
 
 // handleWalletBalances returns token balances for a specific wallet
@@ -43,27 +43,22 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // @Param address path string true "Wallet address (base58 encoded)"
 // @Produce json
 // @Success 200 {object} tokens.WalletBalances "Wallet token balances"
-// @Failure 400 {object} map[string]interface{} "Invalid wallet address"
-// @Failure 500 {object} map[string]interface{} "Failed to fetch balances"
+// @Failure 400 {object} server.ErrorResponse "Validation error"
+// @Failure 500 {object} server.ErrorResponse "Internal server error"
+// @Failure 502 {object} server.ErrorResponse "Network connectivity error"
 // @Router /wallet/{address}/balances [get]
 func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	// Extract wallet address from URL path
 	addressStr := chi.URLParam(r, "address")
 	if addressStr == "" {
-		http.Error(w, `{"error": "wallet address is required"}`, http.StatusBadRequest)
+		s.writeValidationError(w, "Wallet address is required", "Address parameter missing from URL path")
 		return
 	}
 
 	// Parse and validate wallet address
 	wallet := solana.Address(addressStr)
 	if err := wallet.Validate(); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Invalid wallet address format",
-			"details": err.Error(),
-		})
+		s.writeValidationError(w, "Invalid wallet address format", err.Error())
 		return
 	}
 
@@ -71,38 +66,17 @@ func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
 	// This implements strict error handling - all tokens must succeed
 	balances, err := s.tokenService.GetWalletBalances(r.Context(), wallet)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Failed to fetch wallet balances",
-			"details": err.Error(),
-		})
+		// Categorize the error appropriately for better error handling
+		if isNetworkError(err) {
+			s.writeNetworkError(w, err.Error())
+		} else if isValidationError(err) {
+			s.writeValidationError(w, "Failed to fetch wallet balances", err.Error())
+		} else {
+			s.writeInternalError(w, err.Error())
+		}
 		return
 	}
 
-	// Return direct WalletBalances JSON response (Option A format)
-	json.NewEncoder(w).Encode(balances)
-}
-
-// Helper functions for handlers
-
-// writeJSONError writes a JSON error response with the specified status code
-func writeJSONError(w http.ResponseWriter, statusCode int, message string, details ...string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	response := map[string]interface{}{
-		"error": message,
-	}
-
-	if len(details) > 0 && details[0] != "" {
-		response["details"] = details[0]
-	}
-
-	json.NewEncoder(w).Encode(response)
-}
-
-// writeJSONResponse writes a JSON response with 200 status code
-func writeJSONResponse(w http.ResponseWriter, data interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(data)
+	// Return direct WalletBalances JSON response (maintains backward compatibility)
+	s.writeJSONSuccess(w, balances)
 }

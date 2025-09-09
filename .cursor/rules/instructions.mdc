@@ -19,3 +19,4 @@ alwaysApply: true
   - Add environment-specific examples
   - Document RPC endpoint dependencies
 - When writing tests, use or add constant, do not use magic numbers
+- For API responses always use structures and type, use helpers and always write conststent error habdling and response code
