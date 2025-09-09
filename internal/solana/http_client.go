@@ -104,6 +104,7 @@ func (c *HTTPClient) GetTransaction(ctx context.Context, signature Signature) (*
 			"encoding":                       "json",
 			"commitment":                     "confirmed",
 			"maxSupportedTransactionVersion": 0,
+			"rewards":                        false,
 		},
 	}
 

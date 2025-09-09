@@ -148,11 +148,30 @@ type TransactionDetails struct {
 
 // TxMeta contains transaction metadata
 type TxMeta struct {
-	Err          interface{} `json:"err"`
-	Fee          uint64      `json:"fee"`
-	LogMessages  []string    `json:"logMessages"`
-	PreBalances  []uint64    `json:"preBalances"`
-	PostBalances []uint64    `json:"postBalances"`
+	Err               interface{}    `json:"err"`
+	Fee               uint64         `json:"fee"`
+	LogMessages       []string       `json:"logMessages"`
+	PreBalances       []uint64       `json:"preBalances"`
+	PostBalances      []uint64       `json:"postBalances"`
+	PreTokenBalances  []TokenBalance `json:"preTokenBalances"`
+	PostTokenBalances []TokenBalance `json:"postTokenBalances"`
+}
+
+// TokenBalance represents a token balance in transaction metadata
+type TokenBalance struct {
+	AccountIndex  uint32         `json:"accountIndex"`
+	Mint          string         `json:"mint"`
+	Owner         *string        `json:"owner,omitempty"`
+	ProgramId     *string        `json:"programId,omitempty"`
+	UITokenAmount *UITokenAmount `json:"uiTokenAmount,omitempty"`
+}
+
+// UITokenAmount provides the token amount in different formats
+type UITokenAmount struct {
+	Amount         string   `json:"amount"`         // Raw amount as string
+	Decimals       uint8    `json:"decimals"`       // Number of decimals
+	UIAmount       *float64 `json:"uiAmount"`       // Human readable amount
+	UIAmountString string   `json:"uiAmountString"` // Human readable as string
 }
 
 // Transaction contains the actual transaction data

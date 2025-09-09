@@ -2,6 +2,7 @@ package hylo
 
 import (
 	"fmt"
+	"strconv"
 
 	"hylo-wallet-tracker-api/internal/solana"
 )
@@ -40,19 +41,32 @@ func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Addres
 		return &TradeParseResult{}, nil
 	}
 
-	// Validate balance arrays
-	if len(tx.Meta.PreBalances) <= xsolAccountIndex || len(tx.Meta.PostBalances) <= xsolAccountIndex {
+	// Look for xSOL token balance changes in pre/post token balances
+	preTokenBalance := findTokenBalance(tx.Meta.PreTokenBalances, uint32(xsolAccountIndex))
+	postTokenBalance := findTokenBalance(tx.Meta.PostTokenBalances, uint32(xsolAccountIndex))
+
+	// If no token balance data found, this is not a token trade
+	if preTokenBalance == nil || postTokenBalance == nil {
+		return &TradeParseResult{}, nil
+	}
+
+	// Parse token amounts
+	preAmount, err := parseTokenAmount(preTokenBalance.UITokenAmount)
+	if err != nil {
 		return &TradeParseResult{
-			Error: "invalid balance data for xSOL account",
+			Error: fmt.Sprintf("failed to parse pre-token amount: %v", err),
 		}, nil
 	}
 
-	// Calculate xSOL balance change
-	preBalance := tx.Meta.PreBalances[xsolAccountIndex]
-	postBalance := tx.Meta.PostBalances[xsolAccountIndex]
+	postAmount, err := parseTokenAmount(postTokenBalance.UITokenAmount)
+	if err != nil {
+		return &TradeParseResult{
+			Error: fmt.Sprintf("failed to parse post-token amount: %v", err),
+		}, nil
+	}
 
-	// If no balance change in xSOL, this is not a trade
-	if preBalance == postBalance {
+	// If no token balance change in xSOL, this is not a trade
+	if preAmount == postAmount {
 		return &TradeParseResult{}, nil
 	}
 
@@ -68,14 +82,14 @@ func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Addres
 	var xsolAmount uint64
 	var tradeSide string
 
-	if postBalance > preBalance {
+	if postAmount > preAmount {
 		// xSOL balance increased = BUY trade
 		tradeSide = TradeSideBuy
-		xsolAmount = postBalance - preBalance
+		xsolAmount = postAmount - preAmount
 	} else {
 		// xSOL balance decreased = SELL trade
 		tradeSide = TradeSideSell
-		xsolAmount = preBalance - postBalance
+		xsolAmount = preAmount - postAmount
 	}
 
 	// Analyze other account balance changes to determine counter-asset
@@ -187,6 +201,31 @@ func IsXSOLTrade(tx *solana.TransactionDetails) bool {
 	}
 
 	return false
+}
+
+// findTokenBalance finds a token balance entry by account index
+func findTokenBalance(tokenBalances []solana.TokenBalance, accountIndex uint32) *solana.TokenBalance {
+	for i := range tokenBalances {
+		if tokenBalances[i].AccountIndex == accountIndex {
+			return &tokenBalances[i]
+		}
+	}
+	return nil
+}
+
+// parseTokenAmount extracts the raw token amount from UITokenAmount
+func parseTokenAmount(uiTokenAmount *solana.UITokenAmount) (uint64, error) {
+	if uiTokenAmount == nil {
+		return 0, fmt.Errorf("UITokenAmount is nil")
+	}
+
+	// Parse the raw amount string to uint64
+	amount, err := strconv.ParseUint(uiTokenAmount.Amount, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse amount '%s': %w", uiTokenAmount.Amount, err)
+	}
+
+	return amount, nil
 }
 
 // ValidateTradeTransaction performs additional validation on a parsed trade
