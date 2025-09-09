@@ -85,3 +85,39 @@ func GetTradeSideFromInstruction(instructionName string) string {
 		return ""
 	}
 }
+
+// Hylo Protocol State Account Seeds
+// These are used to derive Program Derived Addresses (PDAs) for protocol state accounts
+const (
+	// HyloStateSeed is used to derive the main Hylo protocol state account
+	// This account contains the core protocol parameters and Total SOL Reserve
+	HyloStateSeed = "hylo"
+
+	// StabilityPoolConfigSeed is used to derive the stability pool configuration account
+	StabilityPoolConfigSeed = "pool_config"
+
+	// LSTRegistrySeed is used to derive the LST registry account
+	LSTRegistrySeed = "lst_registry"
+)
+
+// GetHyloStateAddress returns the main Hylo protocol state account address
+// This account contains the actual Total SOL Reserve that we need for price calculations
+// For now, we use a placeholder address - this should be replaced with actual PDA derivation
+func GetHyloStateAddress(programID solana.Address) solana.Address {
+	// TODO: Implement proper PDA derivation using crypto/hash functions
+	// For now, return the program ID as a placeholder
+	// In production, this should derive the actual PDA with seeds
+	return programID
+}
+
+// GetStabilityPoolConfigAddress returns the stability pool configuration account address
+func GetStabilityPoolConfigAddress(programID solana.Address) solana.Address {
+	// TODO: Implement proper PDA derivation
+	return programID
+}
+
+// GetLSTRegistryAddress returns the LST registry account address
+func GetLSTRegistryAddress(programID solana.Address) solana.Address {
+	// TODO: Implement proper PDA derivation
+	return programID
+}

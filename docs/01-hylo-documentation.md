@@ -118,7 +118,7 @@ The stability pool **APY** depends on (a) the percentage of SOL value being stak
 **Percentage of staked SOL**:
 
 ```
-%_staked_SOL = ( hyUSD Staked Amount × hyUSD NAV in SOL ) / Total SOL in Reserve
+%_staked_SOL = Total SOL in Reserve / ( hyUSD Staked Amount × hyUSD NAV in SOL )
 ```
 
 **Average Reserve Yield**:

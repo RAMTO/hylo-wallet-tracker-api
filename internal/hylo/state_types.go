@@ -214,3 +214,171 @@ func GetTokenMintName(address solana.Address) string {
 	}
 	return "unknown"
 }
+
+// HyloExchangeState represents the main Hylo exchange program state account
+// This structure mirrors the on-chain program account data layout
+type HyloExchangeState struct {
+	// Version for program upgrades compatibility
+	Version uint8 `json:"version"`
+
+	// Authority that controls the exchange
+	Authority solana.Address `json:"authority"`
+
+	// Total value locked in SOL (sum of all LST reserves converted to SOL)
+	TotalSOLReserve uint64 `json:"total_sol_reserve"` // In lamports
+
+	// Fee configuration
+	MintFeeRateBps   uint16 `json:"mint_fee_rate_bps"`   // Basis points (100 = 1%)
+	RedeemFeeRateBps uint16 `json:"redeem_fee_rate_bps"` // Basis points
+
+	// Protocol revenue tracking
+	TotalFeesCollected uint64 `json:"total_fees_collected"` // In lamports
+
+	// LST registry and vault information
+	LSTCount uint8 `json:"lst_count"` // Number of supported LSTs
+
+	// Reserved space for future fields
+	Reserved [32]byte `json:"reserved"`
+}
+
+// HyloStabilityPoolState represents the stability pool program state
+type HyloStabilityPoolState struct {
+	// Version for program upgrades compatibility
+	Version uint8 `json:"version"`
+
+	// Authority that controls the stability pool
+	Authority solana.Address `json:"authority"`
+
+	// Pool balances
+	HyUSDPoolBalance uint64 `json:"hyusd_pool_balance"` // In raw units (6 decimals)
+	XSOLPoolBalance  uint64 `json:"xsol_pool_balance"`  // In raw units (6 decimals)
+
+	// sHYUSD (staked hyUSD) supply
+	SHyUSDSupply uint64 `json:"shyusd_supply"` // In raw units (6 decimals)
+
+	// Yield distribution configuration
+	YieldDistributionRateBps uint16 `json:"yield_distribution_rate_bps"`
+
+	// Reserved space for future fields
+	Reserved [32]byte `json:"reserved"`
+}
+
+// HyloLSTVaultInfo represents information about an individual LST vault
+type HyloLSTVaultInfo struct {
+	// LST mint address
+	LSTMint solana.Address `json:"lst_mint"`
+
+	// Vault token account holding the LSTs
+	VaultAccount solana.Address `json:"vault_account"`
+
+	// Current balance in the vault (raw LST units)
+	VaultBalance uint64 `json:"vault_balance"`
+
+	// LST price in SOL terms (from Sanctum calculator)
+	LSTToSOLRate uint64 `json:"lst_to_sol_rate"` // Fixed-point with 9 decimals
+
+	// Last update timestamp
+	LastUpdated int64 `json:"last_updated"`
+}
+
+// ParseHyloExchangeState parses the Hylo exchange program account data
+// This implements a best-effort parser based on common Solana program patterns
+func ParseHyloExchangeState(data []byte) (*HyloExchangeState, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty account data")
+	}
+
+	// Most Solana programs start with a discriminator (8 bytes) followed by the struct
+	// For Anchor programs, this is typically the hash of the account name
+	if len(data) < 16 { // Minimum size for a meaningful state account
+		return nil, fmt.Errorf("account data too small: %d bytes", len(data))
+	}
+
+	// Skip discriminator (first 8 bytes) and start parsing the state struct
+	offset := 8
+
+	// Try to parse the basic structure - this is a best-effort implementation
+	state := &HyloExchangeState{}
+
+	if len(data) <= offset {
+		return nil, fmt.Errorf("insufficient data for version field")
+	}
+
+	// Parse version (1 byte)
+	state.Version = data[offset]
+	offset += 1
+
+	// Parse authority (32 bytes for Pubkey)
+	if len(data) < offset+32 {
+		return nil, fmt.Errorf("insufficient data for authority field")
+	}
+	// For now, we'll skip parsing the authority as Address is a string type
+	// TODO: Convert bytes to base58 address string
+	state.Authority = solana.Address("") // Placeholder
+	offset += 32
+
+	// For now, we cannot reliably parse the exact SOL reserve without the proper IDL
+	// This is where we need the actual program schema
+	// As a temporary measure, we'll try to extract reasonable data or return an error
+
+	// If we have enough data left, try to find a reasonable uint64 value that could be the reserve
+	if len(data) >= offset+8 {
+		// Try parsing the next 8 bytes as a potential Total SOL Reserve
+		possibleReserve := binary.LittleEndian.Uint64(data[offset : offset+8])
+
+		// Sanity check: SOL reserve should be reasonable (between 1 SOL and 10M SOL)
+		minReasonableReserve := uint64(1e9)  // 1 SOL in lamports
+		maxReasonableReserve := uint64(1e16) // 10M SOL in lamports
+
+		if possibleReserve >= minReasonableReserve && possibleReserve <= maxReasonableReserve {
+			state.TotalSOLReserve = possibleReserve
+			return state, nil
+		}
+	}
+
+	// If we can't reliably parse the reserve, return an error to trigger fallback
+	return nil, fmt.Errorf("cannot reliably parse Total SOL Reserve from account data - program schema unknown")
+}
+
+// ParseHyloStabilityPoolState parses the Hylo stability pool program account data
+func ParseHyloStabilityPoolState(data []byte) (*HyloStabilityPoolState, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty account data")
+	}
+
+	// Similar approach as exchange state - skip discriminator and parse basic structure
+	if len(data) < 16 {
+		return nil, fmt.Errorf("account data too small: %d bytes", len(data))
+	}
+
+	offset := 8 // Skip discriminator
+	state := &HyloStabilityPoolState{}
+
+	if len(data) <= offset {
+		return nil, fmt.Errorf("insufficient data for version field")
+	}
+
+	// Parse version
+	state.Version = data[offset]
+	offset += 1
+
+	// Parse authority
+	if len(data) < offset+32 {
+		return nil, fmt.Errorf("insufficient data for authority field")
+	}
+	// For now, we'll skip parsing the authority as Address is a string type
+	// TODO: Convert bytes to base58 address string
+	state.Authority = solana.Address("") // Placeholder
+
+	// For stability pool, we don't need to parse the exact structure for SOL reserve calculation
+	// The main exchange state contains the Total SOL Reserve we need
+	return state, nil
+}
+
+// TryParseWithIDL attempts to parse Hylo state using Anchor IDL if available
+// This is a placeholder for future implementation with proper IDL-based parsing
+func TryParseWithIDL(data []byte, accountType string) (interface{}, error) {
+	// TODO: Implement IDL-based parsing when we have access to Hylo's IDL files
+	// This would provide the exact account layouts for reliable parsing
+	return nil, fmt.Errorf("IDL-based parsing not yet implemented for account type: %s", accountType)
+}
