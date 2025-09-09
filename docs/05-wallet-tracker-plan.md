@@ -2,6 +2,8 @@
 
 > Scope: Backend-only, Solana mainnet-beta. Read-only services to provide prices (SOL, xSOL), balances (hyUSD, sHYUSD, xSOL), and xSOL trade history. Transport: **SSE**. Explorer: **Solscan**. Backfill: **from genesis**.
 
+> **Price Data Source**: **DexScreener API** for SOL/USD pricing (replaces oracle complexity with simple HTTP API calls). Combined with on-chain Hylo state for xSOL price computation.
+
 ---
 
 ## Locked Decisions
@@ -35,7 +37,7 @@
 
 **Function Usage:**
 
-- `GetAccount` — Price engine reads Switchboard SOL/USD + Hylo state accounts
+- `GetAccount` — Price engine reads Hylo state accounts (xSOL calculation data)
 - `AccountSubscribe` — Indexer watches specific wallet ATAs (hyUSD, sHYUSD, xSOL) + Hylo state accounts
 - `LogsSubscribe` — Indexer monitors Hylo program transaction logs
 - `GetSignaturesForAddress` — Historical backfill gets wallet's xSOL trade signatures
@@ -56,10 +58,33 @@
 ## Block C — Hylo State & xSOL Price Engine
 
 **Scope:** `/internal/hylo` + `/internal/price` — Load Hylo state; implement formulas to compute **xSOL in SOL** and **USD**.  
-**Inputs:** Hylo program IDs, state accounts, Switchboard SOL/USD feed.  
-**Outputs:** `PriceService.XSOL()` → `{ xsol_sol, xsol_usd }`; snapshots to DB, cache.  
-**API:** `GET /price` (phase 2) → `{ sol_usd, xsol_sol, xsol_usd }`.  
-**Accept:** Matches docs/SDK reference vectors within rounding tolerance; Guardian Network verification.
+**Inputs:** Hylo program IDs, state accounts, DexScreener API for SOL/USD price.  
+**Outputs:** `PriceService.XSOL()` → `{ xsol_sol, xsol_usd }`; cached results, price snapshots.  
+**API:** `GET /price` → `{ sol_usd, xsol_sol, xsol_usd, updated_at }`.  
+**Accept:** Matches docs/SDK reference vectors within rounding tolerance; DexScreener API reliability with fallback handling.
+
+**Implementation Approach:**
+
+**Phase C1: DexScreener Integration** _(2-3 days)_
+
+- HTTP client for DexScreener API (`https://api.dexscreener.com`)
+- SOL/USD price fetching with best pair selection (highest liquidity SOL/USDC or SOL/USDT pairs)
+- Response caching (30-60 second TTL) and error handling with exponential backoff
+- Price validation (sanity checks for reasonable SOL price range $50-$1000)
+
+**Phase C2: Hylo State Reader** _(2-3 days)_
+
+- Use existing `GetAccount` from Block A to read Hylo state accounts
+- Parse Hylo state data for xSOL computation (leverage ratio, total SOL, total xSOL)
+- Implement xSOL price formula: `xSOL_price_USD = SOL_price_USD * leverage_ratio`
+- State validation and error handling following established patterns
+
+**Phase C3: Price Service & Caching** _(1-2 days)_
+
+- `PriceService` struct with `DexScreenerClient` and `Solana.HTTPClient` dependencies
+- Combined price computation: fetch SOL price (DexScreener) + Hylo state (on-chain)
+- In-memory caching with TTL expiration and cache-aside pattern
+- Fallback strategies (cached prices during API failures, degraded service modes)
 
 ---
 
