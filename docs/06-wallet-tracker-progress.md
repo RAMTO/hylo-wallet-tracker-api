@@ -481,7 +481,307 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 - [x] **B2 Complete:** ATA derivation working with test vectors ✅
 - [x] **B3 Complete:** Balance service fetching all token balances ✅
 - [x] **B4 Complete:** TokenService and wallet balance API endpoint functional ✅
-- [x] **Block B Done:** Wallet balance functionality complete, ready for Block D (Transaction History) ✅
+- [x] **Block B Done:** Wallet balance functionality complete, ready for Block C (Price Engine) ✅
+
+---
+
+## Block C — Price Engine (SOL/USD & xSOL Price Calculation)
+
+### **Overview**
+
+Implements comprehensive price fetching infrastructure combining external SOL/USD price sources with on-chain Hylo state reading for xSOL price calculation. Provides real-time price data with caching, monitoring, and REST API endpoints following Hylo protocol formulas.
+
+**Module Path:** `/internal/price` + `/internal/hylo` (state reading)  
+**Dependencies:** Block A (`/internal/solana` HTTPClient, Address types), DexScreener API, Hylo protocol state accounts
+
+### **Overall Progress**
+
+- [ ] **Phase C1:** SOL/USD Price Integration (DexScreener) _(0/4 tasks completed)_ 🔴
+- [ ] **Phase C2:** Hylo State Reader & xSOL Price Calculation _(0/4 tasks completed)_ 🔴
+- [ ] **Phase C3:** Price Service & API Integration _(0/4 tasks completed)_ 🔴
+- [ ] **Phase C4:** Production Readiness & Monitoring _(0/3 tasks completed)_ 🔴
+
+**Block C Status:** 🔴 Not Started _(Critical missing infrastructure - required for MVP completion)_
+
+### **Phase C1: SOL/USD Price Integration (DexScreener)** _(Independent - 2-3 days)_
+
+**Deliverables:**
+
+- [ ] DexScreener API client with rate limiting and caching
+- [ ] SOL/USD price fetching with liquidity-based pair selection
+- [ ] Price validation and sanity checking ($50-$1000 range)
+- [ ] Comprehensive error handling with exponential backoff
+
+**Components:**
+
+- [ ] `internal/price/dexscreener.go` - DexScreener API client implementation
+- [ ] `internal/price/dexscreener_test.go` - API client tests with mocked responses
+- [ ] `internal/price/types.go` - Price-related types (SOLUSDPrice, PriceConfig)
+- [ ] `internal/price/config.go` - Price service configuration and environment loading
+- [ ] `internal/price/errors.go` - Price-specific error types and wrapping
+
+**Implementation Tasks:**
+
+1. **DexScreener Client Core** (1.5 days)
+
+   - [ ] HTTP client for `https://api.dexscreener.com` with proper timeout handling
+   - [ ] SOL/USD pair fetching with best liquidity selection (SOL/USDC, SOL/USDT prioritization)
+   - [ ] Response parsing and validation with comprehensive error handling
+   - [ ] Rate limiting and request throttling to respect API limits
+
+2. **Price Validation & Caching** (0.5 days)
+
+   - [ ] Price sanity checks with configurable bounds ($50-$1000 default range)
+   - [ ] Response caching with 30-60 second TTL using in-memory cache
+   - [ ] Staleness detection and automatic cache refresh mechanisms
+   - [ ] Fallback strategies during API failures (stale cache, degraded service)
+
+3. **Configuration & Environment** (0.5 days)
+
+   - [ ] Environment variable configuration following existing patterns
+   - [ ] `PriceConfig` struct with API timeouts, cache TTL, rate limits
+   - [ ] Configuration validation and default value management
+   - [ ] Integration with existing configuration loading patterns
+
+4. **Testing & Error Handling** (0.5 days)
+   - [ ] Unit tests with mocked DexScreener API responses
+   - [ ] Test retry logic with simulated API failures and rate limits
+   - [ ] Test price validation with edge cases (extreme values, invalid responses)
+   - [ ] Error handling following existing Block A/B patterns
+
+**Acceptance Criteria:**
+
+- [ ] SOL/USD price fetching from DexScreener with >95% reliability
+- [ ] Price caching reduces external API calls to <2 per minute
+- [ ] Comprehensive error handling with graceful degradation during API failures
+- [ ] Tests achieve >90% coverage with comprehensive edge case handling
+- [ ] Configuration integrates seamlessly with existing environment patterns
+- [ ] Price validation prevents extreme values and detects stale data
+
+### **Phase C2: Hylo State Reader & xSOL Price Calculation** _(Depends on C1, Block A - 3-4 days)_
+
+**Deliverables:**
+
+- [ ] On-chain Hylo protocol state reading infrastructure
+- [ ] xSOL price calculation using documented Hylo formulas
+- [ ] Collateral ratio and effective leverage computation
+- [ ] Integration with existing Solana HTTP client patterns
+
+**Components:**
+
+- [ ] `internal/hylo/state_reader.go` - On-chain Hylo state fetching logic
+- [ ] `internal/hylo/state_reader_test.go` - State reading tests with mocked responses
+- [ ] `internal/hylo/price_calculator.go` - xSOL price calculation implementation
+- [ ] `internal/hylo/price_calculator_test.go` - Calculation tests with golden vectors
+- [ ] `internal/hylo/state_types.go` - Hylo protocol state data structures
+
+**Implementation Tasks:**
+
+1. **Hylo State Reader Implementation** (1.5 days)
+
+   - [ ] Read Hylo program state accounts using existing `solana.HTTPClient`
+   - [ ] Parse protocol state data (total SOL reserves, hyUSD supply, xSOL supply)
+   - [ ] Account data deserialization and validation following SPL patterns
+   - [ ] State account address derivation using PDA computation
+
+2. **xSOL Price Calculator** (1.5 days)
+
+   - [ ] Implement core Hylo price formulas from documentation:
+     ```
+     hyUSD_NAV_in_SOL = 1 / SOL_Price_USD
+     xSOL_NAV_in_SOL = (Total_SOL_Reserve - (hyUSD_NAV_in_SOL × hyUSD_Supply)) / xSOL_Supply
+     xSOL_Price_USD = xSOL_NAV_in_SOL × SOL_Price_USD
+     ```
+   - [ ] Collateral ratio calculation for protocol health monitoring
+   - [ ] Effective leverage calculation following documented formulas
+   - [ ] Precision handling with proper decimal arithmetic and rounding
+
+3. **Integration & State Validation** (0.5 days)
+
+   - [ ] Integration with existing Solana service and HTTP client patterns
+   - [ ] State validation and consistency checks (non-zero supplies, valid ratios)
+   - [ ] Error handling for edge cases (division by zero, invalid state)
+   - [ ] Account existence validation and fallback mechanisms
+
+4. **Testing & Golden Vectors** (0.5 days)
+   - [ ] Golden test vectors against known protocol state scenarios
+   - [ ] Unit tests with mocked Hylo state account data
+   - [ ] Edge case testing (extreme ratios, minimal supplies)
+   - [ ] Integration tests with existing Solana HTTP client infrastructure
+
+**Acceptance Criteria:**
+
+- [ ] xSOL price calculation matches reference implementation within 0.1% tolerance
+- [ ] Handles all documented edge cases and error conditions gracefully
+- [ ] State reading integrates with existing Solana HTTP client infrastructure
+- [ ] Tests achieve >90% coverage with comprehensive golden vector validation
+- [ ] Collateral ratio and leverage calculations follow protocol specifications
+- [ ] Error handling consistent with existing Block A/B patterns
+
+### **Phase C3: Price Service & API Integration** _(Depends on C1, C2, existing server - 2-3 days)_
+
+**Deliverables:**
+
+- [ ] Unified PriceService combining SOL/USD and xSOL price logic
+- [ ] `/price` REST API endpoint with proper response formatting
+- [ ] In-memory price caching with TTL and concurrent access safety
+- [ ] Integration with existing server architecture and error handling
+
+**Components:**
+
+- [ ] `internal/price/service.go` - Main PriceService integrating all price logic
+- [ ] `internal/price/service_test.go` - Service integration tests with mocked dependencies
+- [ ] `internal/price/cache.go` - In-memory price caching with TTL management
+- [ ] `internal/price/cache_test.go` - Cache functionality and concurrency tests
+- [ ] `internal/server/price_handlers.go` - `/price` endpoint handler implementation
+
+**Implementation Tasks:**
+
+1. **Unified Price Service Architecture** (1.5 days)
+
+   - [ ] `PriceService` struct integrating DexScreener client + Hylo state reader
+   - [ ] `GetCurrentPrices(ctx)` method returning combined price response
+   - [ ] Dependency injection pattern following existing TokenService/TradeService
+   - [ ] Service lifecycle management (initialization, shutdown) with existing patterns
+
+2. **Price Caching Infrastructure** (1 day)
+
+   - [ ] In-memory cache with configurable TTL (30-60 seconds default)
+   - [ ] Cache-aside pattern with automatic refresh and background updates
+   - [ ] Concurrent access safety using sync.RWMutex for read-heavy workloads
+   - [ ] Fallback to stale cache during API failures with staleness indicators
+
+3. **API Integration & Response Format** (0.5 days)
+
+   - [ ] `/price` endpoint implementation following existing handler patterns
+   - [ ] Response format matching PRD specification:
+     ```json
+     {
+       "sol_usd": 182.35,
+       "xsol_sol": 2.7149,
+       "xsol_usd": 494.04,
+       "updated_at": "2025-01-16T12:01:22Z"
+     }
+     ```
+   - [ ] Server service integration in `NewServer()` following existing patterns
+   - [ ] Route registration in existing chi router configuration
+
+**Acceptance Criteria:**
+
+- [ ] `/price` endpoint returns all required fields with proper decimal formatting
+- [ ] Price caching reduces external API calls to <2 per minute under normal load
+- [ ] Error handling uses existing helper functions consistently
+- [ ] Service integrates seamlessly with existing server architecture
+- [ ] Response latency <500ms for cached prices, <2s for fresh data
+- [ ] Concurrent access safety verified under load testing
+
+### **Phase C4: Production Readiness & Monitoring** _(Depends on C3, existing infrastructure - 1-2 days)_
+
+**Deliverables:**
+
+- [ ] Enhanced health checks with price service status monitoring
+- [ ] Environment configuration with production-ready defaults
+- [ ] Integration testing and performance validation
+- [ ] Documentation updates (API specs, configuration)
+
+**Components:**
+
+- [ ] Enhanced `internal/server/handlers.go` - Updated `/health` with price status
+- [ ] Updated `example.env` - Price-related environment variables
+- [ ] Integration tests for complete price flow validation
+- [ ] Performance testing under load scenarios
+
+**Implementation Tasks:**
+
+1. **Health Integration & Monitoring** (0.5 days)
+
+   - [ ] Enhance `/health` endpoint with price service status
+   - [ ] Price feed staleness detection and alerting
+   - [ ] DexScreener API connectivity monitoring with circuit breaker patterns
+   - [ ] Hylo state reading health checks and error rate tracking
+
+2. **Configuration & Environment Setup** (0.5 days)
+
+   - [ ] Update `example.env` with price-related variables:
+     ```
+     DEXSCREENER_API_URL=https://api.dexscreener.com
+     PRICE_CACHE_TTL_SEC=45
+     PRICE_UPDATE_INTERVAL_SEC=30
+     SOL_USD_MIN_PRICE=50
+     SOL_USD_MAX_PRICE=1000
+     HYLO_STATE_REFRESH_SEC=60
+     ```
+   - [ ] Configuration validation with meaningful error messages
+   - [ ] Environment-specific settings support (staging, production)
+
+3. **Testing & Documentation** (1 day)
+   - [ ] Integration tests for complete price flow (SOL/USD + xSOL calculation)
+   - [ ] Performance testing under concurrent load
+   - [ ] API documentation updates (Swagger/OpenAPI specifications)
+   - [ ] Error scenario testing and recovery validation
+
+**Acceptance Criteria:**
+
+- [ ] `/health` endpoint accurately reflects price service health status
+- [ ] Configuration supports all production deployment scenarios
+- [ ] Integration tests achieve >85% end-to-end coverage
+- [ ] Performance meets SLA requirements (<500ms P95 for cached responses)
+- [ ] Documentation is complete and accurate for production deployment
+- [ ] Error handling and recovery tested under failure scenarios
+
+### **Dependencies & Phase Relationships**
+
+```
+Block A (HTTP Client) ──► C1 (DexScreener) ──► C3 (Price Service) ──► C4 (Production)
+                      │                     │
+                      └──► C2 (Hylo State) ──┘
+                           │
+                           └──► C3 (xSOL Calculation)
+
+Existing Server ────────────────────────────────► C3 (API Integration)
+```
+
+**Phase Dependencies:**
+
+- **C1** depends on Block A HTTP client patterns but is otherwise independent
+- **C2** depends on Block A for Solana state reading and C1 for SOL/USD price input
+- **C3** depends on both C1 and C2 for unified price service functionality
+- **C4** depends on C3 and existing server infrastructure for production readiness
+
+**Testing Strategy:**
+
+- Each phase has comprehensive unit tests with >90% coverage target
+- C1 uses mocked DexScreener responses for API client testing
+- C2 uses mocked Hylo state data and golden vectors for calculation validation
+- C3 includes integration tests combining all price logic components
+- C4 focuses on end-to-end testing and performance validation
+
+---
+
+### **Block C Completion Checklist**
+
+**Files to Create:** _(Total estimated: 12-14 files for Block C)_
+
+- [ ] **C1: 5 files**
+  - [ ] `internal/price/dexscreener.go`, `dexscreener_test.go`
+  - [ ] `internal/price/types.go`, `config.go`, `errors.go`
+- [ ] **C2: 5 files**
+  - [ ] `internal/hylo/state_reader.go`, `state_reader_test.go`
+  - [ ] `internal/hylo/price_calculator.go`, `price_calculator_test.go`, `state_types.go`
+- [ ] **C3: 4 files**
+  - [ ] `internal/price/service.go`, `service_test.go`
+  - [ ] `internal/price/cache.go`, `cache_test.go`
+- [ ] **C4: 2 files** (updating existing + documentation)
+  - [ ] `internal/server/price_handlers.go`
+  - [ ] Update `example.env`, documentation, integration tests
+
+**Key Milestones:**
+
+- [ ] **C1 Complete:** DexScreener integration with reliable SOL/USD price fetching
+- [ ] **C2 Complete:** Hylo state reading and xSOL price calculation working
+- [ ] **C3 Complete:** Unified price service with `/price` API endpoint functional
+- [ ] **C4 Complete:** Production-ready price infrastructure with monitoring
+- [ ] **Block C Done:** Complete price fetching functionality ready for MVP deployment
 
 ---
 
@@ -492,7 +792,7 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 Implements xSOL transaction history tracking with real-time fetching and parsing. Provides paginated API endpoints for wallet trade history without database persistence, focusing on recent transaction data via on-demand RPC calls.
 
 **Module Path:** `/internal/hylo` + `/internal/trades`  
-**Dependencies:** Block A (`/internal/solana` HTTPClient, transaction types), Block B (`/internal/tokens` ATA derivation, constants), Hylo program constants
+**Dependencies:** Block A (`/internal/solana` HTTPClient, transaction types), Block B (`/internal/tokens` ATA derivation, constants), Block C (for future price context), Hylo program constants
 
 ### **Overall Progress**
 
