@@ -242,6 +242,219 @@ func TestParseTransaction(t *testing.T) {
 			walletXSOLATA: "",
 			expectedError: "wallet xSOL ATA address cannot be empty",
 		},
+		{
+			name: "xSOL SELL for hyUSD - token balance change",
+			tx: &solana.TransactionDetails{
+				BlockTime: int64Ptr(1757360079),
+				Slot:      365528388,
+				Meta: &solana.TxMeta{
+					Err: nil,
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "100000000", // 100 xSOL
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 5,
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // hyUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1000000000", // 1000 hyUSD
+								Decimals: 6,
+							},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "0", // 0 xSOL
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 5,
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // hyUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1233591985", // 1233.591985 hyUSD
+								Decimals: 6,
+							},
+						},
+					},
+				},
+				Transaction: solana.Transaction{
+					Message: solana.TxMessage{
+						AccountKeys: []string{
+							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+							"5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+							"HyUSDATAAddressHere1234567890123456789012345",
+						},
+					},
+					Signatures: []string{"testHyUSDSellSig"},
+				},
+			},
+			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			expectedTrade: &XSOLTrade{
+				Signature:     "testHyUSDSellSig",
+				Slot:          365528388,
+				BlockTime:     1757360079,
+				Side:          TradeSideSell,
+				XSOLAmount:    "100",
+				CounterAmount: "233.591985",
+				CounterAsset:  "hyUSD",
+			},
+		},
+		{
+			name: "xSOL BUY with sHYUSD - token balance change",
+			tx: &solana.TransactionDetails{
+				BlockTime: int64Ptr(1757360079),
+				Slot:      365528388,
+				Meta: &solana.TxMeta{
+					Err: nil,
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "50000000", // 50 xSOL
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 7,
+							Mint:         "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz", // sHYUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "800000000", // 800 sHYUSD
+								Decimals: 6,
+							},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "125000000", // 125 xSOL (bought 75)
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 7,
+							Mint:         "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz", // sHYUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "300000000", // 300 sHYUSD (spent 500)
+								Decimals: 6,
+							},
+						},
+					},
+				},
+				Transaction: solana.Transaction{
+					Message: solana.TxMessage{
+						AccountKeys: []string{
+							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
+							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+							"HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
+							"SHYUSDATAAddressHere123456789012345678901234",
+							"",
+							"SHYUSDATAAddressHere123456789012345678901234",
+						},
+					},
+					Signatures: []string{"testSHYUSDBuySig"},
+				},
+			},
+			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			expectedTrade: &XSOLTrade{
+				Signature:     "testSHYUSDBuySig",
+				Slot:          365528388,
+				BlockTime:     1757360079,
+				Side:          TradeSideBuy,
+				XSOLAmount:    "75",
+				CounterAmount: "500",
+				CounterAsset:  "sHYUSD",
+			},
+		},
+		{
+			name: "mixed balance changes - token change larger than SOL change",
+			tx: &solana.TransactionDetails{
+				BlockTime: int64Ptr(1757360079),
+				Slot:      365528388,
+				Meta: &solana.TxMeta{
+					Err: nil,
+					// Native SOL balance changes (smaller)
+					PreBalances:  []uint64{1000000000, 2000000000}, // 1 SOL, 2 SOL
+					PostBalances: []uint64{1100000000, 2000000000}, // 1.1 SOL, 2 SOL (0.1 SOL change)
+					// Token balance changes (larger)
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "25000000", // 25 xSOL
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 5,
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // hyUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "500000000", // 500 hyUSD
+								Decimals: 6,
+							},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "0", // 0 xSOL (sold 25)
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 5,
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // hyUSD
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1200000000", // 1200 hyUSD (received 700)
+								Decimals: 6,
+							},
+						},
+					},
+				},
+				Transaction: solana.Transaction{
+					Message: solana.TxMessage{
+						AccountKeys: []string{
+							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", // Index 0 - has SOL change
+							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // Index 1
+							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // Index 2
+							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ", // Index 3 - xSOL ATA
+							"5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // Index 4
+							"HyUSDATAAddressHere1234567890123456789012345", // Index 5 - hyUSD ATA
+						},
+					},
+					Signatures: []string{"testMixedBalanceSig"},
+				},
+			},
+			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			expectedTrade: &XSOLTrade{
+				Signature:     "testMixedBalanceSig",
+				Slot:          365528388,
+				BlockTime:     1757360079,
+				Side:          TradeSideSell,
+				XSOLAmount:    "25",
+				CounterAmount: "700",   // Token change (700 hyUSD) > SOL change (0.1 SOL)
+				CounterAsset:  "hyUSD", // Should pick hyUSD, not SOL
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -577,6 +790,158 @@ func TestValidateTradeTransaction(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestDetectTokenAssetType tests the token asset type detection from mint addresses
+func TestDetectTokenAssetType(t *testing.T) {
+	tests := []struct {
+		name         string
+		mintAddress  string
+		expectedType string
+	}{
+		{
+			name:         "hyUSD mint",
+			mintAddress:  "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+			expectedType: "hyUSD",
+		},
+		{
+			name:         "sHYUSD mint",
+			mintAddress:  "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",
+			expectedType: "sHYUSD",
+		},
+		{
+			name:         "xSOL mint",
+			mintAddress:  "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+			expectedType: "xSOL",
+		},
+		{
+			name:         "unknown token mint",
+			mintAddress:  "UnknownMintAddress1234567890123456789012345",
+			expectedType: "TOKEN",
+		},
+		{
+			name:         "empty mint address",
+			mintAddress:  "",
+			expectedType: "TOKEN",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detectTokenAssetType(tt.mintAddress)
+			if result != tt.expectedType {
+				t.Errorf("detectTokenAssetType(%q) = %q, want %q", tt.mintAddress, result, tt.expectedType)
+			}
+		})
+	}
+}
+
+// TestAnalyzeTokenBalanceChanges tests the token balance change detection logic
+func TestAnalyzeTokenBalanceChanges(t *testing.T) {
+	tests := []struct {
+		name           string
+		tx             *solana.TransactionDetails
+		xsolIndex      int
+		tradeSide      string
+		expectedAmount uint64
+		expectedAsset  string
+	}{
+		{
+			name: "SELL trade - hyUSD received",
+			tx: &solana.TransactionDetails{
+				Meta: &solana.TxMeta{
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex:  3,
+							Mint:          "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL (skip)
+							UITokenAmount: &solana.UITokenAmount{Amount: "100000000", Decimals: 6},
+						},
+						{
+							AccountIndex:  5,
+							Mint:          "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // hyUSD
+							UITokenAmount: &solana.UITokenAmount{Amount: "1000000000", Decimals: 6},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex:  3,
+							Mint:          "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL (skip)
+							UITokenAmount: &solana.UITokenAmount{Amount: "0", Decimals: 6},
+						},
+						{
+							AccountIndex:  5,
+							Mint:          "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",           // hyUSD
+							UITokenAmount: &solana.UITokenAmount{Amount: "1500000000", Decimals: 6}, // +500 hyUSD
+						},
+					},
+				},
+			},
+			xsolIndex:      3,
+			tradeSide:      TradeSideSell,
+			expectedAmount: 500000000, // 500 hyUSD (raw amount)
+			expectedAsset:  "hyUSD",
+		},
+		{
+			name: "BUY trade - sHYUSD spent",
+			tx: &solana.TransactionDetails{
+				Meta: &solana.TxMeta{
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex:  3,
+							Mint:          "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL (skip)
+							UITokenAmount: &solana.UITokenAmount{Amount: "50000000", Decimals: 6},
+						},
+						{
+							AccountIndex:  7,
+							Mint:          "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz", // sHYUSD
+							UITokenAmount: &solana.UITokenAmount{Amount: "1000000000", Decimals: 6},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex:  3,
+							Mint:          "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL (skip)
+							UITokenAmount: &solana.UITokenAmount{Amount: "150000000", Decimals: 6},
+						},
+						{
+							AccountIndex:  7,
+							Mint:          "HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz",          // sHYUSD
+							UITokenAmount: &solana.UITokenAmount{Amount: "300000000", Decimals: 6}, // -700 sHYUSD
+						},
+					},
+				},
+			},
+			xsolIndex:      3,
+			tradeSide:      TradeSideBuy,
+			expectedAmount: 700000000, // 700 sHYUSD (raw amount)
+			expectedAsset:  "sHYUSD",
+		},
+		{
+			name: "no token balance changes",
+			tx: &solana.TransactionDetails{
+				Meta: &solana.TxMeta{
+					PreTokenBalances:  []solana.TokenBalance{},
+					PostTokenBalances: []solana.TokenBalance{},
+				},
+			},
+			xsolIndex:      3,
+			tradeSide:      TradeSideSell,
+			expectedAmount: 0,
+			expectedAsset:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			amount, asset := analyzeTokenBalanceChanges(tt.tx, tt.xsolIndex, tt.tradeSide)
+			if amount != tt.expectedAmount {
+				t.Errorf("analyzeTokenBalanceChanges() amount = %d, want %d", amount, tt.expectedAmount)
+			}
+			if asset != tt.expectedAsset {
+				t.Errorf("analyzeTokenBalanceChanges() asset = %q, want %q", asset, tt.expectedAsset)
 			}
 		})
 	}
