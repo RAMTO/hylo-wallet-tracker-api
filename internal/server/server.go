@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"hylo-wallet-tracker-api/internal/hylo"
+	"hylo-wallet-tracker-api/internal/price"
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
 	"hylo-wallet-tracker-api/internal/trades"
@@ -21,6 +23,13 @@ type Server struct {
 	solanaService *solana.Service
 	tokenService  *tokens.TokenService
 	tradeService  *trades.TradeService
+	priceService  *hylo.PriceService
+	
+	// Price caching - implemented at server level for Phase C3
+	priceCacheMutex sync.RWMutex
+	cachedPrices    *price.CombinedPriceResponse
+	cacheExpiry     time.Time
+	cacheTTL        time.Duration
 }
 
 func NewServer() *http.Server {
@@ -63,11 +72,19 @@ func NewServer() *http.Server {
 
 	fmt.Println("✅ Trade service created successfully")
 
+	// Bootstrap Price service with all required dependencies
+	priceConfig := price.NewConfig()
+	priceService := hylo.NewPriceService(solanaService.GetHTTPClient(), hyloConfig, priceConfig)
+
+	fmt.Println("✅ Price service created successfully")
+
 	newServer := &Server{
 		port:          port,
 		solanaService: solanaService,
 		tokenService:  tokenService,
 		tradeService:  tradeService,
+		priceService:  priceService,
+		cacheTTL:      priceConfig.CacheTTL, // Use TTL from price config (45 seconds default)
 	}
 
 	// Declare Server config

@@ -54,6 +54,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/price": {
+            "get": {
+                "description": "Fetch current prices for SOL/USD, xSOL/SOL, and xSOL/USD with caching",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "price"
+                ],
+                "summary": "Get current asset prices",
+                "responses": {
+                    "200": {
+                        "description": "Current asset prices",
+                        "schema": {
+                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_price.CombinedPriceResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Network connectivity error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/wallet/{address}/balances": {
             "get": {
                 "description": "Fetch balances for hyUSD, sHYUSD, and xSOL tokens for a specific wallet address",
@@ -200,6 +232,27 @@ const docTemplate = `{
                 "xsolAmount": {
                     "description": "Formatted xSOL amount (e.g., \"1.5\")",
                     "type": "string"
+                }
+            }
+        },
+        "hylo-wallet-tracker-api_internal_price.CombinedPriceResponse": {
+            "type": "object",
+            "properties": {
+                "sol_usd": {
+                    "description": "SOLUSD is the current SOL price in USD",
+                    "type": "number"
+                },
+                "updated_at": {
+                    "description": "UpdatedAt indicates the timestamp of the most recent price update",
+                    "type": "string"
+                },
+                "xsol_sol": {
+                    "description": "XSOLInSOL is the current xSOL price in SOL terms",
+                    "type": "number"
+                },
+                "xsol_usd": {
+                    "description": "XSOLInUSD is the current xSOL price in USD terms",
+                    "type": "number"
                 }
             }
         },

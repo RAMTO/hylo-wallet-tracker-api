@@ -36,6 +36,12 @@ func DefaultConfig() *PriceConfig {
 	}
 }
 
+// NewConfig creates a PriceConfig loading values from environment variables
+// This is the standard constructor used by the server - follows existing patterns
+func NewConfig() *PriceConfig {
+	return NewConfigFromEnvironment()
+}
+
 // NewConfigFromEnvironment creates a PriceConfig loading values from environment variables
 // Falls back to defaults for any missing or invalid environment variables
 func NewConfigFromEnvironment() *PriceConfig {

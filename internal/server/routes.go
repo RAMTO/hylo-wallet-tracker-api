@@ -30,6 +30,10 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// API Routes
 	r.Get("/health", s.handleHealth)
 
+	// Price endpoint
+	r.Get("/price", s.handlePrice)
+	r.Get("/price/debug", s.handlePriceDebug)
+
 	// Wallet endpoints
 	r.Route("/wallet", func(r chi.Router) {
 		r.Get("/{address}/balances", s.handleWalletBalances)

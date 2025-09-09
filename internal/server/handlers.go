@@ -1,11 +1,14 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	_ "hylo-wallet-tracker-api/internal/price" // Required for swagger type generation
 	"hylo-wallet-tracker-api/internal/solana"
 	_ "hylo-wallet-tracker-api/internal/tokens" // Required for swagger type generation
 	_ "hylo-wallet-tracker-api/internal/trades" // Required for swagger type generation
@@ -148,4 +151,72 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 
 	// Return TradeResponse JSON response (follows existing patterns)
 	s.writeJSONSuccess(w, trades)
+}
+
+// handlePrice returns current price data for all supported assets
+// @Summary Get current asset prices
+// @Description Fetch current prices for SOL/USD, xSOL/SOL, and xSOL/USD with caching
+// @Tags price
+// @Produce json
+// @Success 200 {object} price.CombinedPriceResponse "Current asset prices"
+// @Failure 500 {object} server.ErrorResponse "Internal server error"
+// @Failure 502 {object} server.ErrorResponse "Network connectivity error"
+// @Router /price [get]
+func (s *Server) handlePrice(w http.ResponseWriter, r *http.Request) {
+	// Check cache first
+	s.priceCacheMutex.RLock()
+	if s.cachedPrices != nil && time.Now().Before(s.cacheExpiry) {
+		// Return cached response
+		cached := s.cachedPrices
+		s.priceCacheMutex.RUnlock()
+		s.writeJSONSuccess(w, cached)
+		return
+	}
+	s.priceCacheMutex.RUnlock()
+
+	// Cache miss or expired - fetch fresh prices
+	prices, err := s.priceService.GetCombinedPriceResponse(r.Context())
+	if err != nil {
+		// Try to return stale cache data as fallback
+		s.priceCacheMutex.RLock()
+		stale := s.cachedPrices
+		s.priceCacheMutex.RUnlock()
+
+		if stale != nil {
+			// Return stale data with warning in logs
+			// In production, you might want to add a stale indicator to the response
+			s.writeJSONSuccess(w, stale)
+			return
+		}
+
+		// No fallback available - return error
+		if isNetworkError(err) {
+			s.writeNetworkError(w, err.Error())
+		} else {
+			s.writeInternalError(w, err.Error())
+		}
+		return
+	}
+
+	// Update cache with fresh data
+	s.priceCacheMutex.Lock()
+	s.cachedPrices = prices
+	s.cacheExpiry = time.Now().Add(s.cacheTTL)
+	s.priceCacheMutex.Unlock()
+
+	// Return fresh CombinedPriceResponse JSON (matches PRD specification)
+	s.writeJSONSuccess(w, prices)
+}
+
+// handlePriceDebug returns detailed price calculation information for debugging
+// This is a temporary endpoint to help debug the xSOL price calculation
+func (s *Server) handlePriceDebug(w http.ResponseWriter, r *http.Request) {
+	// Get calculation details
+	details, err := s.priceService.GetPriceCalculationDetails(r.Context())
+	if err != nil {
+		s.writeInternalError(w, fmt.Sprintf("Failed to get calculation details: %v", err))
+		return
+	}
+
+	s.writeJSONSuccess(w, details)
 }
