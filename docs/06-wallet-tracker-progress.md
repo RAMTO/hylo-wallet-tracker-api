@@ -496,57 +496,57 @@ Implements xSOL transaction history tracking with real-time fetching and parsing
 
 ### **Overall Progress**
 
-- [ ] **Phase D1:** Hylo Constants & Configuration _(0/3 tasks completed)_ 🟡
+- [x] **Phase D1:** Hylo Constants & Configuration _(3/3 tasks completed)_ ✅
 - [ ] **Phase D2:** Transaction Parser & Balance Analysis _(0/4 tasks completed)_ 🟡
 - [ ] **Phase D3:** Trade Service & Real-Time Fetching _(0/4 tasks completed)_ 🟡
 - [ ] **Phase D4:** API Integration & Trades Endpoint _(0/3 tasks completed)_ 🟡
 
-**Block D Status:** 🟡 Planned _(Ready to start implementation)_
+**Block D Status:** 🚧 In Progress _(Phase D1 complete, ready for D2)_
 
 ### **Phase D1: Hylo Constants & Configuration** _(Independent - 30 minutes)_
 
 **Deliverables:**
 
-- [ ] Hylo program IDs and constants extraction
-- [ ] Trade identification constants and instruction mapping
-- [ ] Integration with existing token constants
-- [ ] Configuration validation and environment setup
+- [x] Hylo program IDs and constants extraction ✅
+- [x] Trade identification constants and instruction mapping ✅
+- [x] Integration with existing token constants ✅
+- [x] Configuration validation and environment setup ✅
 
 **Components:**
 
-- [ ] `internal/hylo/constants.go` - Hylo protocol constants and program IDs
-- [ ] `internal/hylo/config.go` - Hylo configuration struct and validation
-- [ ] Integration with existing `internal/tokens/constants.go` for token mints
+- [x] `internal/hylo/constants.go` - Hylo protocol constants and program IDs ✅
+- [x] `internal/hylo/config.go` - Hylo configuration struct and validation ✅
+- [x] Integration with existing `internal/tokens/constants.go` for token mints ✅
 
 **Implementation Tasks:**
 
-1. **Extract Hylo Program IDs** (15 min)
+1. **Extract Hylo Program IDs** (15 min) ✅
 
-   - [ ] Extract Exchange Program ID from `docs/02-hylo-so-sdk.txt`
-   - [ ] Extract Stability Pool Program ID from Hylo SDK documentation
-   - [ ] Define program constants for xSOL trade identification
-   - [ ] Add environment variable configuration for program addresses
+   - [x] Extract Exchange Program ID from `docs/01-hylo-documentation.md` ✅
+   - [x] Extract Stability Pool Program ID from Hylo documentation ✅
+   - [x] Define program constants for xSOL trade identification ✅
+   - [x] Add environment variable configuration for program addresses ✅
 
-2. **Trade Instruction Constants** (10 min)
+2. **Trade Instruction Constants** (10 min) ✅
 
-   - [ ] Define instruction discriminators for xSOL trades
-   - [ ] Map `MintXSOLInstruction` (BUY operations) and `RedeemXSOLInstruction` (SELL operations)
-   - [ ] Integration constants for transaction parsing
-   - [ ] Reuse existing `tokens.XSOLMint`, `tokens.HyUSDMint` from Block B
+   - [x] Define instruction constants for xSOL trades ✅
+   - [x] Map `MintLeverCoinInstruction` (BUY operations) and `RedeemLeverCoinInstruction` (SELL operations) ✅
+   - [x] Integration constants for transaction parsing ✅
+   - [x] Helper functions for trade side determination ✅
 
-3. **Configuration Integration** (5 min)
-   - [ ] Create `HyloConfig` struct following existing patterns
-   - [ ] Integrate with existing `tokens.Config` for consistency
-   - [ ] Add validation methods following Block A/B patterns
-   - [ ] Environment variable loading and validation
+3. **Configuration Integration** (5 min) ✅
+   - [x] Create `Config` struct following existing patterns ✅
+   - [x] Integrate with existing `solana.Address` types for consistency ✅
+   - [x] Add validation methods following Block A/B patterns ✅
+   - [x] Environment variable loading and program registry ✅
 
 **Acceptance Criteria:**
 
-- [ ] All Hylo program IDs correctly extracted from SDK documentation
-- [ ] Trade instruction constants properly defined for parsing
-- [ ] Configuration integrates seamlessly with existing Block A/B patterns
-- [ ] Environment variables follow existing naming conventions
-- [ ] Validation follows established error handling patterns
+- [x] All Hylo program IDs correctly extracted from official documentation ✅
+- [x] Trade instruction constants properly defined for parsing ✅
+- [x] Configuration integrates seamlessly with existing Block A/B patterns ✅
+- [x] Environment variables follow existing naming conventions ✅
+- [x] Validation follows established error handling patterns ✅
 
 ### **Phase D2: Transaction Parser & Balance Analysis** _(Depends on D1 - 2-3 hours)_
 
@@ -734,8 +734,8 @@ Existing Server ─────────────────────�
 
 **Files to Create:** _(Total estimated: 8-9 files for Block D)_
 
-- [ ] **D1: 2 files**
-  - [ ] `internal/hylo/constants.go`, `internal/hylo/config.go`
+- [x] **D1: 2 files** ✅
+  - [x] `internal/hylo/constants.go`, `internal/hylo/config.go` ✅
 - [ ] **D2: 3 files**
   - [ ] `internal/hylo/parser.go`, `internal/hylo/types.go`, `internal/hylo/parser_test.go`
 - [ ] **D3: 3 files**
@@ -745,7 +745,7 @@ Existing Server ─────────────────────�
 
 **Key Milestones:**
 
-- [ ] **D1 Complete:** Hylo constants and configuration ready
+- [x] **D1 Complete:** Hylo constants and configuration ready ✅
 - [ ] **D2 Complete:** Transaction parser working with balance-change detection
 - [ ] **D3 Complete:** Trade service fetching and parsing xSOL trades in real-time
 - [ ] **D4 Complete:** Trade history API endpoint functional with pagination
