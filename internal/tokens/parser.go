@@ -3,7 +3,6 @@ package tokens
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 
 	solanainternal "hylo-wallet-tracker-api/internal/solana"
 
@@ -136,41 +135,6 @@ func ValidateTokenAccount(account *SPLTokenAccount, expectedMint solanainternal.
 // IsZeroBalance returns true if the token account has a zero balance
 func (account *SPLTokenAccount) IsZeroBalance() bool {
 	return account.Amount == 0
-}
-
-// GetFormattedAmount returns the token amount formatted with decimals
-func (account *SPLTokenAccount) GetFormattedAmount(decimals uint8) string {
-	return formatTokenAmount(account.Amount, decimals)
-}
-
-// formatTokenAmount formats raw token amount with proper decimal precision
-func formatTokenAmount(rawAmount uint64, decimals uint8) string {
-	if rawAmount == 0 {
-		return "0"
-	}
-
-	// Simple decimal formatting for display
-	divisor := uint64(1)
-	for i := uint8(0); i < decimals; i++ {
-		divisor *= 10
-	}
-
-	integerPart := rawAmount / divisor
-	fractionalPart := rawAmount % divisor
-
-	if fractionalPart == 0 {
-		return fmt.Sprintf("%d", integerPart)
-	}
-
-	// Format with decimals, removing trailing zeros
-	fracStr := fmt.Sprintf("%0*d", decimals, fractionalPart)
-	fracStr = strings.TrimRight(fracStr, "0")
-
-	if fracStr == "" {
-		return fmt.Sprintf("%d", integerPart)
-	}
-
-	return fmt.Sprintf("%d.%s", integerPart, fracStr)
 }
 
 // String returns a string representation of the token account

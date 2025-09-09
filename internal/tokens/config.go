@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"hylo-wallet-tracker-api/internal/solana"
+	"hylo-wallet-tracker-api/internal/utils"
 )
 
 // Config holds token configuration and provides token registry functionality
@@ -259,7 +260,7 @@ func (c *Config) FormatAmount(mint solana.Address, rawAmount uint64) string {
 	}
 
 	balance := NewTokenBalance(*tokenInfo, rawAmount)
-	return balance.FormatDecimal()
+	return utils.FormatTokenAmount(balance.RawAmount, balance.TokenInfo.Decimals)
 }
 
 // ParseAmount parses a decimal amount string into raw amount for a given mint
@@ -270,5 +271,5 @@ func (c *Config) ParseAmount(mint solana.Address, decimalAmount string) (uint64,
 		return 0, fmt.Errorf("unsupported token mint: %s", mint)
 	}
 
-	return ParseDecimalAmount(decimalAmount, tokenInfo.Decimals)
+	return utils.ParseDecimalAmount(decimalAmount, tokenInfo.Decimals)
 }

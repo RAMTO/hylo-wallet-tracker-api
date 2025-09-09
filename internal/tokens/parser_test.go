@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"hylo-wallet-tracker-api/internal/solana"
+	"hylo-wallet-tracker-api/internal/utils"
 )
 
 func TestParseSPLTokenAccount(t *testing.T) {
@@ -201,11 +202,11 @@ func TestSPLTokenAccountMethods(t *testing.T) {
 		}
 	})
 
-	t.Run("GetFormattedAmount", func(t *testing.T) {
+	t.Run("FormatTokenAmount", func(t *testing.T) {
 		account := &SPLTokenAccount{Amount: 1500000}
 
 		// Test with 6 decimals (hyUSD)
-		formatted := account.GetFormattedAmount(6)
+		formatted := utils.FormatTokenAmount(account.Amount, 6)
 		expected := "1.5"
 		if formatted != expected {
 			t.Errorf("Expected formatted amount '%s', got '%s'", expected, formatted)
@@ -213,7 +214,7 @@ func TestSPLTokenAccountMethods(t *testing.T) {
 
 		// Test with 9 decimals (SOL)
 		account.Amount = 1000000000
-		formatted = account.GetFormattedAmount(9)
+		formatted = utils.FormatTokenAmount(account.Amount, 9)
 		expected = "1"
 		if formatted != expected {
 			t.Errorf("Expected formatted amount '%s', got '%s'", expected, formatted)
@@ -221,7 +222,7 @@ func TestSPLTokenAccountMethods(t *testing.T) {
 
 		// Test zero amount
 		account.Amount = 0
-		formatted = account.GetFormattedAmount(6)
+		formatted = utils.FormatTokenAmount(account.Amount, 6)
 		expected = "0"
 		if formatted != expected {
 			t.Errorf("Expected formatted amount '%s', got '%s'", expected, formatted)
@@ -262,9 +263,9 @@ func TestFormatTokenAmount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := formatTokenAmount(tt.amount, tt.decimals)
+			result := utils.FormatTokenAmount(tt.amount, tt.decimals)
 			if result != tt.expected {
-				t.Errorf("formatTokenAmount(%d, %d) = %s, want %s",
+				t.Errorf("utils.FormatTokenAmount(%d, %d) = %s, want %s",
 					tt.amount, tt.decimals, result, tt.expected)
 			}
 		})

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"hylo-wallet-tracker-api/internal/solana"
+	"hylo-wallet-tracker-api/internal/utils"
 )
 
 func TestTokenConstants(t *testing.T) {
@@ -325,15 +326,15 @@ func TestParseDecimalAmount(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			rawAmount, err := ParseDecimalAmount(tc.decimalStr, tc.decimals)
+			rawAmount, err := utils.ParseDecimalAmount(tc.decimalStr, tc.decimals)
 			if err != nil {
-				t.Errorf("ParseDecimalAmount(%s, %d) failed: %v",
+				t.Errorf("utils.ParseDecimalAmount(%s, %d) failed: %v",
 					tc.decimalStr, tc.decimals, err)
 				continue
 			}
 
 			if rawAmount != tc.expectedRaw {
-				t.Errorf("ParseDecimalAmount(%s, %d): expected %d, got %d",
+				t.Errorf("utils.ParseDecimalAmount(%s, %d): expected %d, got %d",
 					tc.decimalStr, tc.decimals, tc.expectedRaw, rawAmount)
 			}
 		}
@@ -350,9 +351,9 @@ func TestParseDecimalAmount(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			_, err := ParseDecimalAmount(tc.decimalStr, tc.decimals)
+			_, err := utils.ParseDecimalAmount(tc.decimalStr, tc.decimals)
 			if err == nil {
-				t.Errorf("ParseDecimalAmount(%s, %d) should have failed",
+				t.Errorf("utils.ParseDecimalAmount(%s, %d) should have failed",
 					tc.decimalStr, tc.decimals)
 			}
 		}

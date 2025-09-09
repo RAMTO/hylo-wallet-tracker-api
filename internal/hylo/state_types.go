@@ -7,6 +7,7 @@ import (
 
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
+	"hylo-wallet-tracker-api/internal/utils"
 )
 
 // Token mint addresses are imported from tokens package to avoid duplication
@@ -110,45 +111,16 @@ func ParseSPLTokenMintData(data []byte) (*SPLTokenInfo, error) {
 	return info, nil
 }
 
-// FormatTokenAmount formats a raw token amount with proper decimal precision
-func FormatTokenAmount(rawAmount uint64, decimals uint8) string {
-	if rawAmount == 0 {
-		return "0"
-	}
-
-	// Calculate divisor for decimal precision
-	divisor := uint64(1)
-	for i := uint8(0); i < decimals; i++ {
-		divisor *= 10
-	}
-
-	integerPart := rawAmount / divisor
-	fractionalPart := rawAmount % divisor
-
-	if fractionalPart == 0 {
-		return fmt.Sprintf("%d", integerPart)
-	}
-
-	// Format with decimals, removing trailing zeros
-	fracStr := fmt.Sprintf("%0*d", decimals, fractionalPart)
-	// Remove trailing zeros
-	for len(fracStr) > 1 && fracStr[len(fracStr)-1] == '0' {
-		fracStr = fracStr[:len(fracStr)-1]
-	}
-
-	return fmt.Sprintf("%d.%s", integerPart, fracStr)
-}
-
 // GetFormattedSupplies returns human-readable token supplies
 func (s *HyloProtocolState) GetFormattedSupplies() (string, string) {
-	hyusdFormatted := FormatTokenAmount(s.HyUSDSupply, s.HyUSDMintInfo.Decimals)
-	xsolFormatted := FormatTokenAmount(s.XSOLSupply, s.XSOLMintInfo.Decimals)
+	hyusdFormatted := utils.FormatTokenAmount(s.HyUSDSupply, s.HyUSDMintInfo.Decimals)
+	xsolFormatted := utils.FormatTokenAmount(s.XSOLSupply, s.XSOLMintInfo.Decimals)
 	return hyusdFormatted, xsolFormatted
 }
 
 // GetFormattedSOLReserve returns human-readable SOL reserve amount
 func (s *HyloProtocolState) GetFormattedSOLReserve() string {
-	return FormatTokenAmount(s.TotalSOLReserve, 9) // SOL has 9 decimals (lamports)
+	return utils.FormatTokenAmount(s.TotalSOLReserve, 9) // SOL has 9 decimals (lamports)
 }
 
 // IsHealthy checks if the protocol state indicates healthy conditions
