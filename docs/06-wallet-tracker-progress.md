@@ -481,4 +481,272 @@ Block A (HTTP Client) ──► B1 (Token Config) ──► B2 (ATA Derivation) 
 - [x] **B2 Complete:** ATA derivation working with test vectors ✅
 - [x] **B3 Complete:** Balance service fetching all token balances ✅
 - [x] **B4 Complete:** TokenService and wallet balance API endpoint functional ✅
-- [x] **Block B Done:** Wallet balance functionality complete, ready for Block C (Price Engine) ✅
+- [x] **Block B Done:** Wallet balance functionality complete, ready for Block D (Transaction History) ✅
+
+---
+
+## Block D — Transaction History (xSOL trades, **real-time fetching**)
+
+### **Overview**
+
+Implements xSOL transaction history tracking with real-time fetching and parsing. Provides paginated API endpoints for wallet trade history without database persistence, focusing on recent transaction data via on-demand RPC calls.
+
+**Module Path:** `/internal/hylo` + `/internal/trades`  
+**Dependencies:** Block A (`/internal/solana` HTTPClient, transaction types), Block B (`/internal/tokens` ATA derivation, constants), Hylo program constants
+
+### **Overall Progress**
+
+- [ ] **Phase D1:** Hylo Constants & Configuration _(0/3 tasks completed)_ 🟡
+- [ ] **Phase D2:** Transaction Parser & Balance Analysis _(0/4 tasks completed)_ 🟡
+- [ ] **Phase D3:** Trade Service & Real-Time Fetching _(0/4 tasks completed)_ 🟡
+- [ ] **Phase D4:** API Integration & Trades Endpoint _(0/3 tasks completed)_ 🟡
+
+**Block D Status:** 🟡 Planned _(Ready to start implementation)_
+
+### **Phase D1: Hylo Constants & Configuration** _(Independent - 30 minutes)_
+
+**Deliverables:**
+
+- [ ] Hylo program IDs and constants extraction
+- [ ] Trade identification constants and instruction mapping
+- [ ] Integration with existing token constants
+- [ ] Configuration validation and environment setup
+
+**Components:**
+
+- [ ] `internal/hylo/constants.go` - Hylo protocol constants and program IDs
+- [ ] `internal/hylo/config.go` - Hylo configuration struct and validation
+- [ ] Integration with existing `internal/tokens/constants.go` for token mints
+
+**Implementation Tasks:**
+
+1. **Extract Hylo Program IDs** (15 min)
+
+   - [ ] Extract Exchange Program ID from `docs/02-hylo-so-sdk.txt`
+   - [ ] Extract Stability Pool Program ID from Hylo SDK documentation
+   - [ ] Define program constants for xSOL trade identification
+   - [ ] Add environment variable configuration for program addresses
+
+2. **Trade Instruction Constants** (10 min)
+
+   - [ ] Define instruction discriminators for xSOL trades
+   - [ ] Map `MintXSOLInstruction` (BUY operations) and `RedeemXSOLInstruction` (SELL operations)
+   - [ ] Integration constants for transaction parsing
+   - [ ] Reuse existing `tokens.XSOLMint`, `tokens.HyUSDMint` from Block B
+
+3. **Configuration Integration** (5 min)
+   - [ ] Create `HyloConfig` struct following existing patterns
+   - [ ] Integrate with existing `tokens.Config` for consistency
+   - [ ] Add validation methods following Block A/B patterns
+   - [ ] Environment variable loading and validation
+
+**Acceptance Criteria:**
+
+- [ ] All Hylo program IDs correctly extracted from SDK documentation
+- [ ] Trade instruction constants properly defined for parsing
+- [ ] Configuration integrates seamlessly with existing Block A/B patterns
+- [ ] Environment variables follow existing naming conventions
+- [ ] Validation follows established error handling patterns
+
+### **Phase D2: Transaction Parser & Balance Analysis** _(Depends on D1 - 2-3 hours)_
+
+**Deliverables:**
+
+- [ ] Balance-change based transaction parser for xSOL trades
+- [ ] Trade classification logic (BUY vs SELL determination)
+- [ ] Amount calculation and counter-asset detection
+- [ ] Solscan URL generation for transaction links
+
+**Components:**
+
+- [ ] `internal/hylo/parser.go` - Core transaction parsing logic
+- [ ] `internal/hylo/types.go` - XSOLTrade struct and trade-related types
+- [ ] `internal/hylo/parser_test.go` - Parser tests with mock transaction data
+- [ ] Integration with existing `solana.TransactionDetails` from Block A
+
+**Implementation Tasks:**
+
+1. **XSOLTrade Type Definition** (30 min)
+
+   - [ ] Define `XSOLTrade` struct with JSON tags for API responses
+   - [ ] Include signature, timestamp, slot, side, amounts, explorer URL fields
+   - [ ] Leverage existing `solana.Signature`, `solana.Slot` types from Block A
+   - [ ] Add formatted amount fields using existing decimal formatting patterns
+
+2. **Balance-Change Parser Core** (1.5 hours)
+
+   - [ ] Implement `ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Address)` function
+   - [ ] Use existing `TxMeta.PreBalances` and `TxMeta.PostBalances` from Block A types
+   - [ ] Detect xSOL balance changes to determine trade direction (BUY/SELL)
+   - [ ] Extract amounts using existing token decimal handling from Block B
+
+3. **Trade Classification Logic** (45 min)
+
+   - [ ] Implement BUY detection (xSOL balance increased)
+   - [ ] Implement SELL detection (xSOL balance decreased)
+   - [ ] Counter-asset detection (hyUSD vs SOL) from balance changes
+   - [ ] Amount calculation with proper decimal formatting
+
+4. **URL Generation & Formatting** (15 min)
+   - [ ] Generate Solscan URLs using format: `https://solscan.io/tx/{signature}`
+   - [ ] Implement amount formatting using existing `tokens.FormatTokenAmount()` patterns
+   - [ ] Add timestamp conversion from `*int64` blockTime to `time.Time`
+   - [ ] Error handling following existing Block A/B patterns
+
+**Acceptance Criteria:**
+
+- [ ] Parser correctly identifies xSOL trades from balance changes
+- [ ] BUY/SELL classification is accurate based on balance direction
+- [ ] Amount calculations use proper decimal handling from existing token logic
+- [ ] Solscan URLs are correctly formatted for mainnet transactions
+- [ ] Error handling follows established patterns from Blocks A/B
+- [ ] Tests achieve >85% coverage with mock transaction scenarios
+
+### **Phase D3: Trade Service & Real-Time Fetching** _(Depends on D1, D2 & Blocks A, B - 2-3 hours)_
+
+**Deliverables:**
+
+- [ ] Trade service with real-time signature fetching
+- [ ] Integration with existing Solana HTTP client
+- [ ] Pagination support with cursor-based navigation
+- [ ] Trade response formatting with existing helper patterns
+
+**Components:**
+
+- [ ] `internal/trades/service.go` - TradeService following TokenService patterns
+- [ ] `internal/trades/types.go` - Trade request/response types with pagination
+- [ ] `internal/trades/service_test.go` - Service tests with mocked Solana client
+- [ ] Integration with existing `solana.HTTPClient` interface from Block A
+
+**Implementation Tasks:**
+
+1. **TradeService Architecture** (1 hour)
+
+   - [ ] Create `TradeService` struct following `TokenService` patterns from Block B
+   - [ ] Implement `NewTradeService(httpClient, tokenConfig, hyloConfig)` constructor
+   - [ ] Use existing `HTTPClientInterface` pattern for dependency injection
+   - [ ] Add service lifecycle methods following established patterns
+
+2. **Real-Time Signature Fetching** (1 hour)
+
+   - [ ] Implement `GetWalletTrades(ctx, walletAddr, limit, before)` core method
+   - [ ] Use existing `DeriveAssociatedTokenAddress()` from Block B for xSOL ATA
+   - [ ] Leverage existing `GetSignaturesForAddress()` from Block A HTTP client
+   - [ ] Batch transaction fetching using existing `GetTransaction()` method
+
+3. **Trade Processing Pipeline** (45 min)
+
+   - [ ] Iterate through signatures and fetch transaction details
+   - [ ] Filter and parse xSOL trades using Phase D2 parser
+   - [ ] Handle RPC failures gracefully with existing error patterns
+   - [ ] Build trade list with proper sorting (newest first)
+
+4. **Response Formatting & Pagination** (15 min)
+   - [ ] Build `TradeResponse` with trades array and pagination metadata
+   - [ ] Implement cursor-based pagination using signature as cursor
+   - [ ] Add `has_more` flag and `next_cursor` for frontend pagination
+   - [ ] Use existing timestamp formatting patterns
+
+**Acceptance Criteria:**
+
+- [ ] TradeService follows established architectural patterns from TokenService
+- [ ] Real-time fetching uses existing Solana HTTP client efficiently
+- [ ] Pagination works correctly with signature-based cursors
+- [ ] Error handling integrates with existing `isNetworkError()` classification
+- [ ] Response format is consistent with existing API patterns
+- [ ] Tests achieve >85% coverage with comprehensive mocking scenarios
+
+### **Phase D4: API Integration & Trades Endpoint** _(Depends on D3 & existing server - 1 hour)_
+
+**Deliverables:**
+
+- [ ] REST endpoint `GET /wallet/{address}/trades` with query parameters
+- [ ] TradeService integration with existing server architecture
+- [ ] Enhanced error handling using existing helper functions
+- [ ] Route registration following established patterns
+
+**Components:**
+
+- [ ] Update `internal/server/handlers.go` - Add `handleWalletTrades` handler
+- [ ] Update `internal/server/server.go` - Add TradeService to Server struct
+- [ ] Update `internal/server/routes.go` - Add trades route to wallet group
+- [ ] Integration with existing enhanced helper functions
+
+**Implementation Tasks:**
+
+1. **HTTP Handler Implementation** (30 min)
+
+   - [ ] Add `handleWalletTrades(w http.ResponseWriter, r *http.Request)` to Server
+   - [ ] Extract wallet address using existing `chi.URLParam()` pattern
+   - [ ] Parse query parameters (`limit`, `before`) with validation
+   - [ ] Use existing `wallet.Validate()` for address validation
+
+2. **Server Service Integration** (20 min)
+
+   - [ ] Add `tradeService *trades.TradeService` to Server struct
+   - [ ] Initialize TradeService in `NewServer()` following TokenService pattern
+   - [ ] Use existing `solanaService.GetHTTPClient()` and `tokenConfig`
+   - [ ] Follow established dependency injection patterns
+
+3. **Error Handling & Response** (10 min)
+   - [ ] Use existing `writeValidationError()` for invalid addresses/parameters
+   - [ ] Use existing `writeNetworkError()` and `writeInternalError()` with error classification
+   - [ ] Return trade response using existing `writeJSONSuccess()` helper
+   - [ ] Add route to existing `/wallet` group in routes.go
+
+**Acceptance Criteria:**
+
+- [ ] `GET /wallet/{address}/trades?limit={N}&before={sig}` endpoint functional
+- [ ] Query parameter parsing with proper validation and defaults
+- [ ] Error responses use existing enhanced helper functions consistently
+- [ ] TradeService integrates following TokenService architectural patterns
+- [ ] Route registration follows existing `/wallet` group structure
+- [ ] Response format matches established API patterns from Block B
+
+### **Dependencies & Phase Relationships**
+
+```
+Block A (HTTP Client) ──► D1 (Hylo Constants) ──► D2 (Parser) ──► D3 (Trade Service) ──► D4 (API Integration)
+Block B (Tokens) ──────────┘                      │                    │
+                                                   └──► D3 (ATA Derivation) ──┘
+
+Existing Server ────────────────────────────────────────────────────────────► D4 (Handler Integration)
+```
+
+**Phase Dependencies:**
+
+- **D1** independent - uses existing token constants from Block B
+- **D2** depends on D1 constants and Block A transaction types
+- **D3** depends on D1, D2, and both Blocks A (HTTP client) and B (ATA derivation)
+- **D4** depends on D3 and existing server infrastructure
+
+**Testing Strategy:**
+
+- Each phase has focused unit tests with >85% coverage target
+- D2 uses mock transaction data for parser validation
+- D3 uses mocked Solana responses following Block B patterns
+- D4 includes HTTP integration tests for end-to-end validation
+- Leverage existing test patterns and mock infrastructure from Blocks A/B
+
+---
+
+### **Block D Completion Checklist**
+
+**Files to Create:** _(Total estimated: 8-9 files for Block D)_
+
+- [ ] **D1: 2 files**
+  - [ ] `internal/hylo/constants.go`, `internal/hylo/config.go`
+- [ ] **D2: 3 files**
+  - [ ] `internal/hylo/parser.go`, `internal/hylo/types.go`, `internal/hylo/parser_test.go`
+- [ ] **D3: 3 files**
+  - [ ] `internal/trades/service.go`, `internal/trades/types.go`, `internal/trades/service_test.go`
+- [ ] **D4: 0 new files** (updating existing)
+  - [ ] Update `internal/server/handlers.go`, `internal/server/server.go`, `internal/server/routes.go`
+
+**Key Milestones:**
+
+- [ ] **D1 Complete:** Hylo constants and configuration ready
+- [ ] **D2 Complete:** Transaction parser working with balance-change detection
+- [ ] **D3 Complete:** Trade service fetching and parsing xSOL trades in real-time
+- [ ] **D4 Complete:** Trade history API endpoint functional with pagination
+- [ ] **Block D Done:** Complete xSOL transaction history functionality, ready for production
