@@ -112,7 +112,7 @@ func (r *StateReader) readActualSOLReserve(ctx context.Context, hyusdSupply, xso
 
 	// Convert token supplies to actual amounts
 	hyusdActualSupply := float64(hyusdSupply) / 1e6 // hyUSD has 6 decimals
-	xsolActualSupply := float64(xsolSupply) / 1e6   // xSOL has 6 decimals
+	// xsolActualSupply := float64(xsolSupply) / 1e6   // xSOL has 6 decimals (not used in current calculation)
 
 	// Calculate minimum SOL needed to back hyUSD at $1 (this is the baseline)
 	minSOLForHyUSD := hyusdActualSupply / solPriceUSD
