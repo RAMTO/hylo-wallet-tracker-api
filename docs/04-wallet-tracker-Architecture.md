@@ -13,7 +13,7 @@
 ## Assumptions (from PRD)
 
 - Track **hyUSD, sHYUSD, xSOL** balances and **xSOL buys/sells** only.
-- Prices via **Pyth SOL/USD**; **xSOL** price computed from Hylo state + formulas (from Hylo docs/SDK).
+- Prices via **Switchboard SOL/USD**; **xSOL** price computed from Hylo state + formulas (from Hylo docs/SDK).
 - **Helios** RPC for HTTP and WebSocket subscriptions (backend-only).
 - Backend: **Golang**, Frontend: **React (Vite, PNPM)**
 - Near real-time targets: **P95 < 2s** for price/balances, **< 5s** for new trades.
@@ -32,7 +32,7 @@ graph TB
   subgraph Backend["Golang Services"]
     API[API Gateway (REST + SSE)]
     IDX[Indexer / Ingestor]
-    PRC[Price Engine (Pyth + Hylo formulas)]
+    PRC[Price Engine (Switchboard + Hylo formulas)]
     PARSER[Tx/Log Parser (Hylo IDL)]
     CACHE[(In-memory Cache)]
   end
@@ -45,7 +45,7 @@ graph TB
 
   subgraph Chain["Solana mainnet-beta"]
     HELIOS[[Helios RPC (HTTP + WS)]]
-    PYTH[(Pyth SOL/USD Price Account)]
+    SWB[(Switchboard SOL/USD Price Feed)]
     HYLO[(Hylo Programs + Token Accounts)]
   end
 
@@ -61,7 +61,7 @@ graph TB
   IDX --> CACHE
   IDX -->|WS: account/logs| HELIOS
   PRC -->|read| HELIOS
-  PRC -->|read| PYTH
+  PRC -->|read| SWB
   IDX -->|historical RPC| HELIOS
   API --> MET
   IDX --> MET
@@ -76,7 +76,7 @@ graph TB
   - Subscribes (WS) to Hylo program logs / accounts; watches wallet ATAs for hyUSD/sHYUSD/xSOL.
   - Backfills historical xSOL **mint/redeem** via `getSignaturesForAddress` + decoding.
   - Emits normalized events → DB + cache.
-- **Price Engine**: Reads Pyth SOL/USD, fetches Hylo state, computes **xSOL price (SOL)** → **xSOL price (USD)**; staleness/confidence checks; writes to cache & snapshots to DB.
+- **Price Engine**: Reads Switchboard SOL/USD feed, fetches Hylo state, computes **xSOL price (SOL)** → **xSOL price (USD)**; Guardian Network verification and staleness checks; writes to cache & snapshots to DB.
 - **Parser**: Instruction & log decoding using SDK/IDL; derives side (BUY/SELL) and amounts (pre/post balances + args).
 - **PostgreSQL**: Durable store for `price_snapshots`, `wallet_balances`, `xsol_trades`, `sync_cursors`, `ingest_failures`.
 - **Cache**: Low-latency hot path for price/holdings; TTL-based invalidation on chain events.
@@ -103,7 +103,7 @@ sequenceDiagram
 
   U->>A: GET /price
   A->>P: Request latest prices
-  P->>H: Read Pyth SOL/USD + Hylo state
+  P->>H: Read Switchboard SOL/USD + Hylo state
   H-->>P: On-chain data
   P-->>A: {sol_usd, xsol_sol, xsol_usd}
   A-->>U: Prices JSON
@@ -234,8 +234,8 @@ graph LR
 
 **Compose services (conceptual):**
 
-- **api** (port 8080): env `RPC_HTTP_URL`, `RPC_WS_URL`, `PYTH_SOL_USD_ADDR`, `DB_URL`, `SSE_HEARTBEAT_MS`, `RATE_LIMIT_RPS`.
-- **indexer** (no public port): env `RPC_HTTP_URL`, `RPC_WS_URL`, `PYTH_SOL_USD_ADDR`, `LOOKBACK_DAYS`, `COMMITMENT_LIVE=confirmed`, `COMMITMENT_BACKFILL=finalized`, `DB_URL`.
+- **api** (port 8080): env `RPC_HTTP_URL`, `RPC_WS_URL`, `SWITCHBOARD_SOL_USD_FEED`, `DB_URL`, `SSE_HEARTBEAT_MS`, `RATE_LIMIT_RPS`.
+- **indexer** (no public port): env `RPC_HTTP_URL`, `RPC_WS_URL`, `SWITCHBOARD_SOL_USD_FEED`, `LOOKBACK_DAYS`, `COMMITMENT_LIVE=confirmed`, `COMMITMENT_BACKFILL=finalized`, `DB_URL`.
 - **postgres**: mounted volume; init schema migrations at container start (Go `migrate`).
 - **prometheus** (optional): scrape API/Indexer metrics endpoints.
 
@@ -282,7 +282,7 @@ graph LR
 
 ## Config & Env
 
-- `RPC_WS_URL` / `RPC_HTTP_URL` (Helios), `PYTH_SOL_USD_ADDR`
+- `RPC_WS_URL` / `RPC_HTTP_URL` (Helios), `SWITCHBOARD_SOL_USD_FEED`
 - Hylo program IDs, mints, PDA seeds (from docs/SDK)
 - `LOOKBACK_DAYS` (default 365), `COMMITMENT_LIVE=confirmed`, `COMMITMENT_BACKFILL=finalized`
 - `DB_URL`, `CACHE_TTL_SEC`, `SSE_HEARTBEAT_MS`, `RATE_LIMIT_RPS`
@@ -293,7 +293,7 @@ graph LR
 
 - **Freshness (frontend):** UI shows `updated_at`; stale badge if > N sec.
 - **SLIs:** Ingest lag (slot delta), trade parse error rate, RPC error rate, P95 publish latency (event→client).
-- **Alerts:** Pyth staleness > N sec; Helios WS disconnect loops; DB write failures.
+- **Alerts:** Switchboard feed staleness > N sec; Guardian Network verification failures; Helios WS disconnect loops; DB write failures.
 
 ---
 

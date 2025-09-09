@@ -35,7 +35,7 @@
 
 **Function Usage:**
 
-- `GetAccount` — Price engine reads Pyth SOL/USD + Hylo state accounts
+- `GetAccount` — Price engine reads Switchboard SOL/USD + Hylo state accounts
 - `AccountSubscribe` — Indexer watches specific wallet ATAs (hyUSD, sHYUSD, xSOL) + Hylo state accounts
 - `LogsSubscribe` — Indexer monitors Hylo program transaction logs
 - `GetSignaturesForAddress` — Historical backfill gets wallet's xSOL trade signatures
@@ -56,10 +56,10 @@
 ## Block C — Hylo State & xSOL Price Engine
 
 **Scope:** `/internal/hylo` + `/internal/price` — Load Hylo state; implement formulas to compute **xSOL in SOL** and **USD**.  
-**Inputs:** Hylo program IDs, state accounts, Pyth SOL/USD.  
+**Inputs:** Hylo program IDs, state accounts, Switchboard SOL/USD feed.  
 **Outputs:** `PriceService.XSOL()` → `{ xsol_sol, xsol_usd }`; snapshots to DB, cache.  
 **API:** `GET /price` (phase 2) → `{ sol_usd, xsol_sol, xsol_usd }`.  
-**Accept:** Matches docs/SDK reference vectors within rounding tolerance.
+**Accept:** Matches docs/SDK reference vectors within rounding tolerance; Guardian Network verification.
 
 ---
 
