@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -163,33 +162,10 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 // @Failure 502 {object} server.ErrorResponse "Network connectivity error"
 // @Router /price [get]
 func (s *Server) handlePrice(w http.ResponseWriter, r *http.Request) {
-	// Check cache first
-	s.priceCacheMutex.RLock()
-	if s.cachedPrices != nil && time.Now().Before(s.cacheExpiry) {
-		// Return cached response
-		cached := s.cachedPrices
-		s.priceCacheMutex.RUnlock()
-		s.writeJSONSuccess(w, cached)
-		return
-	}
-	s.priceCacheMutex.RUnlock()
-
-	// Cache miss or expired - fetch fresh prices
+	// Always fetch fresh prices - no caching for maximum freshness
 	prices, err := s.priceService.GetCombinedPriceResponse(r.Context())
 	if err != nil {
-		// Try to return stale cache data as fallback
-		s.priceCacheMutex.RLock()
-		stale := s.cachedPrices
-		s.priceCacheMutex.RUnlock()
-
-		if stale != nil {
-			// Return stale data with warning in logs
-			// In production, you might want to add a stale indicator to the response
-			s.writeJSONSuccess(w, stale)
-			return
-		}
-
-		// No fallback available - return error
+		// Return error - no fallback cache to rely on
 		if isNetworkError(err) {
 			s.writeNetworkError(w, err.Error())
 		} else {
@@ -197,12 +173,6 @@ func (s *Server) handlePrice(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	// Update cache with fresh data
-	s.priceCacheMutex.Lock()
-	s.cachedPrices = prices
-	s.cacheExpiry = time.Now().Add(s.cacheTTL)
-	s.priceCacheMutex.Unlock()
 
 	// Return fresh CombinedPriceResponse JSON (matches PRD specification)
 	s.writeJSONSuccess(w, prices)

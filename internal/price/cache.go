@@ -36,70 +36,37 @@ type PriceCache struct {
 }
 
 // NewPriceCache creates a new price cache with the specified TTL
+// Note: Caching is disabled for fresh prices - this always returns a disabled cache
 func NewPriceCache(ttl time.Duration) *PriceCache {
+	// Always create a disabled cache (TTL = 0) to ensure fresh prices
 	cache := &PriceCache{
 		entries:         make(map[string]*CacheEntry),
-		ttl:             ttl,
-		cleanupInterval: ttl / 2, // Clean up twice as often as TTL
+		ttl:             0, // Force TTL to 0 for no caching
+		cleanupInterval: 0, // No cleanup needed
 	}
 
-	// Start background cleanup goroutine if TTL > 0
-	if ttl > 0 {
-		go cache.cleanupLoop()
-	}
-
+	// No background cleanup goroutine since caching is disabled
 	return cache
 }
 
 // Get retrieves a price from cache if it exists and hasn't expired
+// Note: Always returns false (cache miss) to ensure fresh prices
 func (c *PriceCache) Get(key string) (*SOLUSDPrice, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	entry, exists := c.entries[key]
-	if !exists {
-		return nil, false
-	}
-
-	// Check if entry has expired
-	if time.Now().After(entry.ExpiresAt) {
-		return nil, false
-	}
-
-	return entry.Value, true
+	// Always return cache miss to force fresh price fetching
+	return nil, false
 }
 
 // Set stores a price in cache with TTL expiration
+// Note: This is a no-op since caching is disabled for fresh prices
 func (c *PriceCache) Set(key string, price *SOLUSDPrice) {
-	if price == nil {
-		return
-	}
-
-	now := time.Now()
-	entry := &CacheEntry{
-		Value:     price,
-		ExpiresAt: now.Add(c.ttl),
-		CreatedAt: now,
-	}
-
-	c.mu.Lock()
-	c.entries[key] = entry
-	c.mu.Unlock()
+	// No-op: Don't store anything since caching is disabled
 }
 
 // GetStale retrieves a price from cache even if it has expired
-// Returns the price and a boolean indicating if it's stale (expired)
+// Note: Always returns no results since caching is disabled for fresh prices
 func (c *PriceCache) GetStale(key string) (*SOLUSDPrice, bool, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	entry, exists := c.entries[key]
-	if !exists {
-		return nil, false, false
-	}
-
-	isStale := time.Now().After(entry.ExpiresAt)
-	return entry.Value, true, isStale
+	// Always return no cache entry since caching is disabled
+	return nil, false, false
 }
 
 // Delete removes a price from cache

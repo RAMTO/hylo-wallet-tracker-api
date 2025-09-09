@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"hylo-wallet-tracker-api/internal/hylo"
@@ -24,12 +23,7 @@ type Server struct {
 	tokenService  *tokens.TokenService
 	tradeService  *trades.TradeService
 	priceService  *hylo.PriceService
-	
-	// Price caching - implemented at server level for Phase C3
-	priceCacheMutex sync.RWMutex
-	cachedPrices    *price.CombinedPriceResponse
-	cacheExpiry     time.Time
-	cacheTTL        time.Duration
+	// Note: Price caching removed for fresh prices - all requests fetch live data
 }
 
 func NewServer() *http.Server {
@@ -84,7 +78,7 @@ func NewServer() *http.Server {
 		tokenService:  tokenService,
 		tradeService:  tradeService,
 		priceService:  priceService,
-		cacheTTL:      priceConfig.CacheTTL, // Use TTL from price config (45 seconds default)
+		// Cache TTL removed - fresh prices always fetched
 	}
 
 	// Declare Server config

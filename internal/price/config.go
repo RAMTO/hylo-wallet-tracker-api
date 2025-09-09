@@ -19,10 +19,10 @@ func DefaultConfig() *PriceConfig {
 		SOLUSDMinPrice: 50.0,   // Minimum reasonable SOL price in USD
 		SOLUSDMaxPrice: 1000.0, // Maximum reasonable SOL price in USD
 
-		// Caching configuration - balance between freshness and API usage
-		CacheTTL:        45 * time.Second, // Cache price data for 45 seconds
-		UpdateInterval:  30 * time.Second, // Update prices every 30 seconds
-		MaxStalenessSec: 300,              // Consider prices stale after 5 minutes
+		// Caching disabled for fresh prices - all requests go to API
+		CacheTTL:        0, // Caching disabled
+		UpdateInterval:  0, // No scheduled updates
+		MaxStalenessSec: 0, // No staleness checks
 
 		// Rate limiting configuration - respect API limits
 		RequestsPerMinute: 10,              // Conservative rate limit
@@ -138,21 +138,10 @@ func (c *PriceConfig) Validate() error {
 			c.SOLUSDMaxPrice, c.SOLUSDMinPrice)
 	}
 
-	// Validate caching configuration
-	if c.CacheTTL <= 0 {
-		return fmt.Errorf("cache TTL must be positive, got %v", c.CacheTTL)
-	}
-	if c.UpdateInterval <= 0 {
-		return fmt.Errorf("update interval must be positive, got %v", c.UpdateInterval)
-	}
-	if c.MaxStalenessSec <= 0 {
-		return fmt.Errorf("max staleness must be positive, got %v", c.MaxStalenessSec)
-	}
+	// Caching is disabled for fresh prices - skip cache validation
+	// Cache TTL of 0 means no caching, which is the desired behavior
 
-	// Warn if update interval is longer than cache TTL (potential staleness)
-	if c.UpdateInterval > c.CacheTTL {
-		// This is a warning, not an error - allow but note potential staleness
-	}
+	// No cache-related warnings needed when caching is disabled
 
 	// Validate rate limiting
 	if c.RequestsPerMinute <= 0 {
@@ -220,8 +209,9 @@ func (c *PriceConfig) IsValidSOLPrice(price float64) bool {
 }
 
 // ShouldCache determines if the current configuration supports caching
+// Always returns false now since we want fresh prices
 func (c *PriceConfig) ShouldCache() bool {
-	return c.CacheTTL > 0
+	return false // Caching disabled for fresh prices
 }
 
 // String returns a string representation of the config (without sensitive data)
