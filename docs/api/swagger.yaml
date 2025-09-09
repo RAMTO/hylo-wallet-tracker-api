@@ -2,39 +2,53 @@ basePath: /
 consumes:
 - application/json
 definitions:
+  hylo-wallet-tracker-api_internal_hylo.XSOLTrade:
+    properties:
+      blockTime:
+        description: Unix timestamp
+        type: integer
+      counterAmount:
+        description: Formatted counter-asset amount
+        type: string
+      counterAsset:
+        description: '"SOL" or "hyUSD"'
+        type: string
+      explorerUrl:
+        description: Solscan transaction URL
+        type: string
+      side:
+        description: Trade details
+        type: string
+      signature:
+        description: Transaction identifiers
+        type: string
+      slot:
+        description: Solana slot number
+        type: integer
+      timestamp:
+        description: Display fields
+        type: string
+      xsolAmount:
+        description: Formatted xSOL amount (e.g., "1.5")
+        type: string
+    type: object
   hylo-wallet-tracker-api_internal_tokens.TokenBalance:
     properties:
-      decimal_amount:
-        description: DecimalAmount is the human-readable amount adjusted for token
-          decimals
+      decimals:
+        description: Decimals is the number of decimal places for this token
+        type: integer
+      formatted_amount:
+        description: FormattedAmount is the human-readable amount with proper decimal
+          adjustment
         type: string
       raw_amount:
         description: RawAmount is the raw token amount as stored on-chain (without
           decimal adjustment)
         type: integer
-      token_info:
-        allOf:
-        - $ref: '#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenInfo'
-        description: TokenInfo contains the token metadata
       usd_value:
         description: USDValue is the USD value of this token balance (optional, for
           display)
         type: number
-    type: object
-  hylo-wallet-tracker-api_internal_tokens.TokenInfo:
-    properties:
-      decimals:
-        description: Decimals is the number of decimal places for this token
-        type: integer
-      mint:
-        description: Mint is the Solana mint address for this token
-        type: string
-      name:
-        description: Name is the human-readable display name
-        type: string
-      symbol:
-        description: Symbol is the short identifier (e.g., "hyUSD", "xSOL")
-        type: string
     type: object
   hylo-wallet-tracker-api_internal_tokens.WalletBalances:
     properties:
@@ -54,6 +68,65 @@ definitions:
         type: string
       wallet:
         description: Wallet is the wallet address these balances belong to
+        type: string
+    type: object
+  hylo-wallet-tracker-api_internal_trades.PaginationInfo:
+    properties:
+      count:
+        description: Count is the number of items in the current response
+        type: integer
+      hasMore:
+        description: HasMore indicates if there are more trades available
+        type: boolean
+      limit:
+        description: Limit is the maximum number of items per page
+        type: integer
+      nextCursor:
+        description: |-
+          NextCursor is the signature cursor for the next page
+          Only present when HasMore is true
+        type: string
+    type: object
+  hylo-wallet-tracker-api_internal_trades.TradeResponse:
+    properties:
+      count:
+        description: Number of trades returned
+        type: integer
+      pagination:
+        allOf:
+        - $ref: '#/definitions/hylo-wallet-tracker-api_internal_trades.PaginationInfo'
+        description: Pagination metadata for frontend navigation
+      requestedAt:
+        type: string
+      trades:
+        description: Trades is the array of xSOL trades for this wallet
+        items:
+          $ref: '#/definitions/hylo-wallet-tracker-api_internal_hylo.XSOLTrade'
+        type: array
+      walletAddress:
+        description: Request metadata
+        type: string
+    type: object
+  internal_server.ErrorResponse:
+    properties:
+      code:
+        description: For categorizing errors
+        type: string
+      details:
+        type: string
+      error:
+        type: string
+      request_id:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_server.HealthResponse:
+    properties:
+      solana: {}
+      status:
+        type: string
+      timestamp:
         type: string
     type: object
 host: localhost:8080
@@ -79,13 +152,11 @@ paths:
         "200":
           description: Service is healthy
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_server.HealthResponse'
         "503":
           description: Service is unhealthy - Solana RPC issues
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_server.HealthResponse'
       summary: Health check endpoint
       tags:
       - health
@@ -107,16 +178,58 @@ paths:
           schema:
             $ref: '#/definitions/hylo-wallet-tracker-api_internal_tokens.WalletBalances'
         "400":
-          description: Invalid wallet address
+          description: Validation error
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_server.ErrorResponse'
         "500":
-          description: Failed to fetch balances
+          description: Internal server error
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_server.ErrorResponse'
+        "502":
+          description: Network connectivity error
+          schema:
+            $ref: '#/definitions/internal_server.ErrorResponse'
       summary: Get wallet token balances
+      tags:
+      - wallet
+  /wallet/{address}/trades:
+    get:
+      description: Fetch paginated xSOL trade history for a specific wallet address
+        with real-time RPC data
+      parameters:
+      - description: Wallet address (base58 encoded)
+        in: path
+        name: address
+        required: true
+        type: string
+      - description: Maximum number of trades to return (1-50, default 10)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination - signature to fetch trades before
+        in: query
+        name: before
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wallet xSOL trade history
+          schema:
+            $ref: '#/definitions/hylo-wallet-tracker-api_internal_trades.TradeResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/internal_server.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/internal_server.ErrorResponse'
+        "502":
+          description: Network connectivity error
+          schema:
+            $ref: '#/definitions/internal_server.ErrorResponse'
+      summary: Get wallet xSOL trade history
       tags:
       - wallet
 produces:

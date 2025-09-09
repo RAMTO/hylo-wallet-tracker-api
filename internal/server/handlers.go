@@ -2,10 +2,13 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"hylo-wallet-tracker-api/internal/solana"
+	_ "hylo-wallet-tracker-api/internal/tokens" // Required for swagger type generation
+	_ "hylo-wallet-tracker-api/internal/trades" // Required for swagger type generation
 )
 
 // handleHealth returns basic liveness status
@@ -79,4 +82,70 @@ func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
 
 	// Return direct WalletBalances JSON response (maintains backward compatibility)
 	s.writeJSONSuccess(w, balances)
+}
+
+// handleWalletTrades returns xSOL trade history for a specific wallet
+// @Summary Get wallet xSOL trade history
+// @Description Fetch paginated xSOL trade history for a specific wallet address with real-time RPC data
+// @Tags wallet
+// @Param address path string true "Wallet address (base58 encoded)"
+// @Param limit query int false "Maximum number of trades to return (1-50, default 10)"
+// @Param before query string false "Cursor for pagination - signature to fetch trades before"
+// @Produce json
+// @Success 200 {object} trades.TradeResponse "Wallet xSOL trade history"
+// @Failure 400 {object} server.ErrorResponse "Validation error"
+// @Failure 500 {object} server.ErrorResponse "Internal server error"
+// @Failure 502 {object} server.ErrorResponse "Network connectivity error"
+// @Router /wallet/{address}/trades [get]
+func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
+	// Extract wallet address from URL path
+	addressStr := chi.URLParam(r, "address")
+	if addressStr == "" {
+		s.writeValidationError(w, "Wallet address is required", "Address parameter missing from URL path")
+		return
+	}
+
+	// Parse and validate wallet address
+	wallet := solana.Address(addressStr)
+	if err := wallet.Validate(); err != nil {
+		s.writeValidationError(w, "Invalid wallet address format", err.Error())
+		return
+	}
+
+	// Parse query parameters with defaults
+	limit := 10 // Default limit
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
+			limit = parsedLimit
+		} else {
+			s.writeValidationError(w, "Invalid limit parameter", "Limit must be a valid integer")
+			return
+		}
+	}
+
+	// Validate limit range
+	if limit < 1 || limit > 50 {
+		s.writeValidationError(w, "Invalid limit parameter", "Limit must be between 1 and 50")
+		return
+	}
+
+	// Extract before cursor for pagination (optional)
+	before := r.URL.Query().Get("before")
+
+	// Fetch wallet trades using trade service
+	trades, err := s.tradeService.GetWalletTrades(r.Context(), wallet, limit, before)
+	if err != nil {
+		// Categorize the error appropriately for better error handling
+		if isNetworkError(err) {
+			s.writeNetworkError(w, err.Error())
+		} else if isValidationError(err) {
+			s.writeValidationError(w, "Failed to fetch wallet trades", err.Error())
+		} else {
+			s.writeInternalError(w, err.Error())
+		}
+		return
+	}
+
+	// Return TradeResponse JSON response (follows existing patterns)
+	s.writeJSONSuccess(w, trades)
 }

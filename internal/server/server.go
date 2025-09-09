@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	"hylo-wallet-tracker-api/internal/hylo"
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
+	"hylo-wallet-tracker-api/internal/trades"
 
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -18,6 +20,7 @@ type Server struct {
 	port          int
 	solanaService *solana.Service
 	tokenService  *tokens.TokenService
+	tradeService  *trades.TradeService
 }
 
 func NewServer() *http.Server {
@@ -51,10 +54,20 @@ func NewServer() *http.Server {
 
 	fmt.Println("✅ Token service created successfully")
 
+	// Bootstrap Trade service with Solana HTTP client, token config, and hylo config
+	hyloConfig := hylo.NewConfig()
+	tradeService, err := trades.NewTradeService(solanaService.GetHTTPClient(), tokenConfig, hyloConfig)
+	if err != nil {
+		log.Fatalf("Failed to create Trade service: %v", err)
+	}
+
+	fmt.Println("✅ Trade service created successfully")
+
 	newServer := &Server{
 		port:          port,
 		solanaService: solanaService,
 		tokenService:  tokenService,
+		tradeService:  tradeService,
 	}
 
 	// Declare Server config

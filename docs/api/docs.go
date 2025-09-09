@@ -42,15 +42,13 @@ const docTemplate = `{
                     "200": {
                         "description": "Service is healthy",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/internal_server.HealthResponse"
                         }
                     },
                     "503": {
                         "description": "Service is unhealthy - Solana RPC issues",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/internal_server.HealthResponse"
                         }
                     }
                 }
@@ -83,17 +81,80 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid wallet address",
+                        "description": "Validation error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Failed to fetch balances",
+                        "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Network connectivity error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/{address}/trades": {
+            "get": {
+                "description": "Fetch paginated xSOL trade history for a specific wallet address with real-time RPC data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Get wallet xSOL trade history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet address (base58 encoded)",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of trades to return (1-50, default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for pagination - signature to fetch trades before",
+                        "name": "before",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Wallet xSOL trade history",
+                        "schema": {
+                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_trades.TradeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Network connectivity error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_server.ErrorResponse"
                         }
                     }
                 }
@@ -101,49 +162,65 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "hylo-wallet-tracker-api_internal_tokens.TokenBalance": {
+        "hylo-wallet-tracker-api_internal_hylo.XSOLTrade": {
             "type": "object",
             "properties": {
-                "decimal_amount": {
-                    "description": "DecimalAmount is the human-readable amount adjusted for token decimals",
-                    "type": "string"
-                },
-                "raw_amount": {
-                    "description": "RawAmount is the raw token amount as stored on-chain (without decimal adjustment)",
+                "blockTime": {
+                    "description": "Unix timestamp",
                     "type": "integer"
                 },
-                "token_info": {
-                    "description": "TokenInfo contains the token metadata",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_tokens.TokenInfo"
-                        }
-                    ]
+                "counterAmount": {
+                    "description": "Formatted counter-asset amount",
+                    "type": "string"
                 },
-                "usd_value": {
-                    "description": "USDValue is the USD value of this token balance (optional, for display)",
-                    "type": "number"
+                "counterAsset": {
+                    "description": "\"SOL\" or \"hyUSD\"",
+                    "type": "string"
+                },
+                "explorerUrl": {
+                    "description": "Solscan transaction URL",
+                    "type": "string"
+                },
+                "side": {
+                    "description": "Trade details",
+                    "type": "string"
+                },
+                "signature": {
+                    "description": "Transaction identifiers",
+                    "type": "string"
+                },
+                "slot": {
+                    "description": "Solana slot number",
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "description": "Display fields",
+                    "type": "string"
+                },
+                "xsolAmount": {
+                    "description": "Formatted xSOL amount (e.g., \"1.5\")",
+                    "type": "string"
                 }
             }
         },
-        "hylo-wallet-tracker-api_internal_tokens.TokenInfo": {
+        "hylo-wallet-tracker-api_internal_tokens.TokenBalance": {
             "type": "object",
             "properties": {
                 "decimals": {
                     "description": "Decimals is the number of decimal places for this token",
                     "type": "integer"
                 },
-                "mint": {
-                    "description": "Mint is the Solana mint address for this token",
+                "formatted_amount": {
+                    "description": "FormattedAmount is the human-readable amount with proper decimal adjustment",
                     "type": "string"
                 },
-                "name": {
-                    "description": "Name is the human-readable display name",
-                    "type": "string"
+                "raw_amount": {
+                    "description": "RawAmount is the raw token amount as stored on-chain (without decimal adjustment)",
+                    "type": "integer"
                 },
-                "symbol": {
-                    "description": "Symbol is the short identifier (e.g., \"hyUSD\", \"xSOL\")",
-                    "type": "string"
+                "usd_value": {
+                    "description": "USDValue is the USD value of this token balance (optional, for display)",
+                    "type": "number"
                 }
             }
         },
@@ -171,6 +248,91 @@ const docTemplate = `{
                 },
                 "wallet": {
                     "description": "Wallet is the wallet address these balances belong to",
+                    "type": "string"
+                }
+            }
+        },
+        "hylo-wallet-tracker-api_internal_trades.PaginationInfo": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "Count is the number of items in the current response",
+                    "type": "integer"
+                },
+                "hasMore": {
+                    "description": "HasMore indicates if there are more trades available",
+                    "type": "boolean"
+                },
+                "limit": {
+                    "description": "Limit is the maximum number of items per page",
+                    "type": "integer"
+                },
+                "nextCursor": {
+                    "description": "NextCursor is the signature cursor for the next page\nOnly present when HasMore is true",
+                    "type": "string"
+                }
+            }
+        },
+        "hylo-wallet-tracker-api_internal_trades.TradeResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "Number of trades returned",
+                    "type": "integer"
+                },
+                "pagination": {
+                    "description": "Pagination metadata for frontend navigation",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/hylo-wallet-tracker-api_internal_trades.PaginationInfo"
+                        }
+                    ]
+                },
+                "requestedAt": {
+                    "type": "string"
+                },
+                "trades": {
+                    "description": "Trades is the array of xSOL trades for this wallet",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/hylo-wallet-tracker-api_internal_hylo.XSOLTrade"
+                    }
+                },
+                "walletAddress": {
+                    "description": "Request metadata",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_server.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "For categorizing errors",
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_server.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "solana": {},
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
                     "type": "string"
                 }
             }

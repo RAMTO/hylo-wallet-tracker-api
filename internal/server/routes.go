@@ -10,6 +10,7 @@ import (
 
 	_ "hylo-wallet-tracker-api/docs/api"        // This line is important for swagger to work
 	_ "hylo-wallet-tracker-api/internal/tokens" // Required for swagger type generation
+	_ "hylo-wallet-tracker-api/internal/trades" // Required for swagger type generation
 )
 
 // RegisterRoutes configures all HTTP routes and middleware for the server
@@ -32,6 +33,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Wallet endpoints
 	r.Route("/wallet", func(r chi.Router) {
 		r.Get("/{address}/balances", s.handleWalletBalances)
+		r.Get("/{address}/trades", s.handleWalletTrades)
 	})
 
 	// Documentation endpoint
