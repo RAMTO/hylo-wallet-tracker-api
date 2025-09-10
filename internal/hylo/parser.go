@@ -128,6 +128,11 @@ func analyzeCounterAssetChanges(tx *solana.TransactionDetails, xsolIndex int, tr
 			continue
 		}
 
+		// Bounds check: ensure the account index exists in AccountKeys
+		if i >= len(tx.Transaction.Message.AccountKeys) {
+			continue
+		}
+
 		postBalance := tx.Meta.PostBalances[i]
 
 		var balanceChange uint64
