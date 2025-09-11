@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"hylo-wallet-tracker-api/internal/solana"
+	"hylo-wallet-tracker-api/internal/tokens"
 )
 
 func TestParseTransaction(t *testing.T) {
@@ -18,26 +19,26 @@ func TestParseTransaction(t *testing.T) {
 		{
 			name: "successful BUY trade",
 			tx: &solana.TransactionDetails{
-				BlockTime: int64Ptr(1757360079),
-				Slot:      365528388,
+				BlockTime: testBlockTimePtr(),
+				Slot:      testSlot(),
 				Meta: &solana.TxMeta{
 					Err: nil,
 					PreTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL mint
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint), // xSOL mint
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "1000000", // 1 xSOL (6 decimals)
+								Amount:   tokens.TestXSOLAmount1M, // 1.0 xSOL
 								Decimals: 6,
 							},
 						},
 					},
 					PostTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "2500000", // 2.5 xSOL
+								Amount:   tokens.TestXSOLAmount2_5M, // 2.5 xSOL
 								Decimals: 6,
 							},
 						},
@@ -46,20 +47,20 @@ func TestParseTransaction(t *testing.T) {
 				Transaction: solana.Transaction{
 					Message: solana.TxMessage{
 						AccountKeys: []string{
-							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", // wallet
-							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // SPL token program
-							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL mint
-							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ", // xSOL ATA (index 3)
+							tokens.TestReferenceWallet, // wallet
+							tokens.SPLTokenProgramID,   // SPL token program
+							string(tokens.XSOLMint),    // xSOL mint
+							tokens.TestXSOLATA1,        // xSOL ATA (index 3)
 						},
 					},
-					Signatures: []string{"testSig123"},
+					Signatures: []string{tokens.TestSignatureBuy},
 				},
 			},
-			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			walletXSOLATA: tokens.TestXSOLATA1,
 			expectedTrade: &XSOLTrade{
-				Signature:    "testSig123",
-				Slot:         365528388,
-				BlockTime:    1757360079,
+				Signature:    tokens.TestSignatureBuy,
+				Slot:         tokens.TestSlot,
+				BlockTime:    tokens.TestBlockTime,
 				Side:         TradeSideBuy,
 				XSOLAmount:   "1.5", // 1,500,000 / 1e6
 				CounterAsset: "SOL",
@@ -68,26 +69,26 @@ func TestParseTransaction(t *testing.T) {
 		{
 			name: "successful SELL trade",
 			tx: &solana.TransactionDetails{
-				BlockTime: int64Ptr(1757360079),
-				Slot:      365528388,
+				BlockTime: testBlockTimePtr(),
+				Slot:      testSlot(),
 				Meta: &solana.TxMeta{
 					Err: nil,
 					PreTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "5000000", // 5 xSOL
+								Amount:   tokens.TestXSOLAmount5M, // 5.0 xSOL
 								Decimals: 6,
 							},
 						},
 					},
 					PostTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "2500000", // 2.5 xSOL
+								Amount:   tokens.TestXSOLAmount2_5M, // 2.5 xSOL
 								Decimals: 6,
 							},
 						},
@@ -96,20 +97,20 @@ func TestParseTransaction(t *testing.T) {
 				Transaction: solana.Transaction{
 					Message: solana.TxMessage{
 						AccountKeys: []string{
-							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
-							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+							tokens.TestReferenceWallet,
+							tokens.SPLTokenProgramID,
+							string(tokens.XSOLMint),
+							tokens.TestXSOLATA1,
 						},
 					},
-					Signatures: []string{"testSig456"},
+					Signatures: []string{tokens.TestSignatureSell},
 				},
 			},
-			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			walletXSOLATA: tokens.TestXSOLATA1,
 			expectedTrade: &XSOLTrade{
-				Signature:    "testSig456",
-				Slot:         365528388,
-				BlockTime:    1757360079,
+				Signature:    tokens.TestSignatureSell,
+				Slot:         tokens.TestSlot,
+				BlockTime:    tokens.TestBlockTime,
 				Side:         TradeSideSell,
 				XSOLAmount:   "2.5", // 2,500,000 / 1e6
 				CounterAsset: "SOL",
@@ -118,26 +119,26 @@ func TestParseTransaction(t *testing.T) {
 		{
 			name: "no balance change - should not be a trade",
 			tx: &solana.TransactionDetails{
-				BlockTime: int64Ptr(1757360079),
-				Slot:      365528388,
+				BlockTime: testBlockTimePtr(),
+				Slot:      testSlot(),
 				Meta: &solana.TxMeta{
 					Err: nil,
 					PreTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "1000000",
+								Amount:   tokens.TestXSOLAmount1M,
 								Decimals: 6,
 							},
 						},
 					},
 					PostTokenBalances: []solana.TokenBalance{
 						{
-							AccountIndex: 3,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							AccountIndex: tokens.TestAccountIndex,
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "1000000", // Same amount
+								Amount:   tokens.TestXSOLAmount1M, // Same amount
 								Decimals: 6,
 							},
 						},
@@ -146,29 +147,29 @@ func TestParseTransaction(t *testing.T) {
 				Transaction: solana.Transaction{
 					Message: solana.TxMessage{
 						AccountKeys: []string{
-							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+							tokens.TestReferenceWallet,
+							tokens.TestXSOLATA1,
 						},
 					},
-					Signatures: []string{"testSig789"},
+					Signatures: []string{tokens.TestSignatureNoTrade},
 				},
 			},
-			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			walletXSOLATA: tokens.TestXSOLATA1,
 			expectNoTrade: true,
 		},
 		{
 			name: "failed transaction - should not be a trade",
 			tx: &solana.TransactionDetails{
-				BlockTime: int64Ptr(1757360079),
-				Slot:      365528388,
+				BlockTime: testBlockTimePtr(),
+				Slot:      testSlot(),
 				Meta: &solana.TxMeta{
 					Err: "InstructionError", // Failed transaction
 					PreTokenBalances: []solana.TokenBalance{
 						{
 							AccountIndex: 1,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "1000000",
+								Amount:   tokens.TestXSOLAmount1M,
 								Decimals: 6,
 							},
 						},
@@ -176,9 +177,9 @@ func TestParseTransaction(t *testing.T) {
 					PostTokenBalances: []solana.TokenBalance{
 						{
 							AccountIndex: 1,
-							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							Mint:         string(tokens.XSOLMint),
 							UITokenAmount: &solana.UITokenAmount{
-								Amount:   "2000000",
+								Amount:   tokens.TestXSOLAmount2M,
 								Decimals: 6,
 							},
 						},
@@ -187,14 +188,14 @@ func TestParseTransaction(t *testing.T) {
 				Transaction: solana.Transaction{
 					Message: solana.TxMessage{
 						AccountKeys: []string{
-							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g",
-							"Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+							tokens.TestReferenceWallet,
+							tokens.TestXSOLATA1,
 						},
 					},
-					Signatures: []string{"testSigFailed"},
+					Signatures: []string{tokens.TestSignatureFailed},
 				},
 			},
-			walletXSOLATA: "Dqk1wW44Mw9LkKBcVjSfWDXeNYuNZ1KaXKFBAuVRzzhJ",
+			walletXSOLATA: tokens.TestXSOLATA1,
 			expectNoTrade: true,
 		},
 		{
@@ -455,6 +456,126 @@ func TestParseTransaction(t *testing.T) {
 				CounterAsset:  "hyUSD", // Should pick hyUSD, not SOL
 			},
 		},
+		{
+			name: "hyUSD BUY trade with historical price calculation",
+			tx: &solana.TransactionDetails{
+				BlockTime: int64Ptr(1757360079),
+				Slot:      365528388,
+				Meta: &solana.TxMeta{
+					Err: nil,
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,                                              // xSOL ATA
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL mint
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1000000", // 1.0 xSOL
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 4,                                              // hyUSD ATA
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // Real hyUSD mint
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1000000000", // 1000 hyUSD
+								Decimals: 6,
+							},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 3,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "3000000", // 3.0 xSOL (bought 2.0 xSOL)
+								Decimals: 6,
+							},
+						},
+						{
+							AccountIndex: 4,                                              // hyUSD ATA
+							Mint:         "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E", // Real hyUSD mint
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "500000000", // 500 hyUSD (spent 500 hyUSD)
+								Decimals: 6,
+							},
+						},
+					},
+				},
+				Transaction: solana.Transaction{
+					Message: solana.TxMessage{
+						AccountKeys: []string{
+							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", // wallet
+							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // SPL token program
+							"4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL mint
+							"xSOLATAaddress123456789abcdef",                // xSOL ATA
+							"hyUSDATAaddress123456789abcdef",               // hyUSD ATA
+						},
+					},
+					Signatures: []string{"testSigHyUSDBuy"},
+				},
+			},
+			walletXSOLATA: "xSOLATAaddress123456789abcdef",
+			expectedTrade: &XSOLTrade{
+				Signature:     "testSigHyUSDBuy",
+				Slot:          365528388,
+				BlockTime:     1757360079,
+				Side:          TradeSideBuy,
+				XSOLAmount:    "2",     // 2.0 xSOL bought
+				CounterAmount: "500",   // 500 hyUSD spent (detected by balance analysis)
+				CounterAsset:  "hyUSD", // Now correctly detected as hyUSD
+				// Note: HistoricalPriceUSD will be calculated as "250.000" (500/2)
+			},
+		},
+		{
+			name: "SOL BUY trade - no historical price should be calculated",
+			tx: &solana.TransactionDetails{
+				BlockTime: int64Ptr(1757360079),
+				Slot:      365528388,
+				Meta: &solana.TxMeta{
+					Err: nil,
+					PreTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 2,                                              // xSOL ATA
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs", // xSOL mint
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "1000000", // 1.0 xSOL
+								Decimals: 6,
+							},
+						},
+					},
+					PostTokenBalances: []solana.TokenBalance{
+						{
+							AccountIndex: 2,
+							Mint:         "4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs",
+							UITokenAmount: &solana.UITokenAmount{
+								Amount:   "3000000", // 3.0 xSOL (bought 2.0 xSOL)
+								Decimals: 6,
+							},
+						},
+					},
+				},
+				Transaction: solana.Transaction{
+					Message: solana.TxMessage{
+						AccountKeys: []string{
+							"A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g", // wallet
+							"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // SPL token program
+							"SOLATAaddress123456789abcdef",                 // xSOL ATA
+						},
+					},
+					Signatures: []string{"testSigSOLTrade"},
+				},
+			},
+			walletXSOLATA: "SOLATAaddress123456789abcdef",
+			expectedTrade: &XSOLTrade{
+				Signature:     "testSigSOLTrade",
+				Slot:          365528388,
+				BlockTime:     1757360079,
+				Side:          TradeSideBuy,
+				XSOLAmount:    "2",   // 2.0 xSOL bought
+				CounterAmount: "10",  // SOL amount (detected by balance analysis)
+				CounterAsset:  "SOL", // SOL trade
+				// Note: HistoricalPriceUSD should be nil for SOL trades
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -528,6 +649,27 @@ func TestParseTransaction(t *testing.T) {
 			expectedURL := "https://solscan.io/tx/" + trade.Signature
 			if trade.ExplorerURL != expectedURL {
 				t.Errorf("expected explorer URL %q, got %q", expectedURL, trade.ExplorerURL)
+			}
+
+			// Verify historical price calculation based on counter asset
+			if trade.CounterAsset == "hyUSD" {
+				// hyUSD trades should have historical price calculated
+				if trade.HistoricalPriceUSD == nil {
+					t.Error("expected HistoricalPriceUSD to be calculated for hyUSD trade, got nil")
+				} else {
+					// Verify the calculation is correct (hyUSD_amount / xSOL_amount)
+					expectedPrice := CalculateHistoricalXSOLPrice(trade)
+					if expectedPrice == nil {
+						t.Error("CalculateHistoricalXSOLPrice returned nil for valid hyUSD trade")
+					} else if *trade.HistoricalPriceUSD != *expectedPrice {
+						t.Errorf("expected historical price %s, got %s", *expectedPrice, *trade.HistoricalPriceUSD)
+					}
+				}
+			} else {
+				// Non-hyUSD trades (SOL, USDC, etc.) should not have historical price
+				if trade.HistoricalPriceUSD != nil {
+					t.Errorf("expected HistoricalPriceUSD to be nil for %s trade, got %s", trade.CounterAsset, *trade.HistoricalPriceUSD)
+				}
 			}
 		})
 	}
@@ -955,6 +1097,16 @@ func TestAnalyzeTokenBalanceChanges(t *testing.T) {
 // Helper functions for tests
 func int64Ptr(v int64) *int64 {
 	return &v
+}
+
+// Helper function to convert test constants to int64 pointer
+func testBlockTimePtr() *int64 {
+	return int64Ptr(tokens.TestBlockTime)
+}
+
+// Helper function to convert test constants to solana.Slot
+func testSlot() solana.Slot {
+	return solana.Slot(tokens.TestSlot)
 }
 
 func contains(s, substr string) bool {

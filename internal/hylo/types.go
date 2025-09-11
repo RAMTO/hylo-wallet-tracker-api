@@ -20,6 +20,9 @@ type XSOLTrade struct {
 	CounterAmount string `json:"counterAmount"` // Formatted counter-asset amount
 	CounterAsset  string `json:"counterAsset"`  // "SOL", "hyUSD", "USDC", etc.
 
+	// Historical pricing (new field)
+	HistoricalPriceUSD *string `json:"historical_price_usd,omitempty"` // Historical xSOL price in USD, only for hyUSD trades
+
 	// Display fields
 	Timestamp   time.Time `json:"timestamp"`   // Parsed timestamp
 	ExplorerURL string    `json:"explorerUrl"` // Solscan transaction URL

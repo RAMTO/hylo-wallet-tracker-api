@@ -3,6 +3,7 @@ package hylo
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"hylo-wallet-tracker-api/internal/price"
@@ -235,4 +236,52 @@ func (calc *PriceCalculator) IsCalculationStale(protocolState *HyloProtocolState
 	}
 
 	return time.Since(protocolState.Timestamp) > maxAge
+}
+
+// CalculateHistoricalXSOLPrice calculates historical xSOL price from trade data
+// Only calculates for hyUSD trades, returns nil for SOL trades
+// Formula: price = hyUSD_amount / xSOL_amount (hyUSD ≈ $1 by design)
+func CalculateHistoricalXSOLPrice(trade *XSOLTrade) *string {
+	// Skip if not hyUSD trade
+	if trade.CounterAsset != "hyUSD" {
+		return nil
+	}
+
+	// Parse amounts (handle decimal strings)
+	xsolAmount, err := parseDecimalAmount(trade.XSOLAmount)
+	if err != nil || xsolAmount <= 0 {
+		return nil
+	}
+
+	hyusdAmount, err := parseDecimalAmount(trade.CounterAmount)
+	if err != nil || hyusdAmount <= 0 {
+		return nil
+	}
+
+	// Calculate: price = hyUSD_amount / xSOL_amount
+	price := hyusdAmount / xsolAmount
+
+	// Sanity check: xSOL price should be reasonable ($1-$10,000 range)
+	if price < 1.0 || price > 10000.0 {
+		return nil // Skip unrealistic prices
+	}
+
+	// Format to 3 decimal places for USD price
+	formatted := fmt.Sprintf("%.3f", price)
+	return &formatted
+}
+
+// parseDecimalAmount parses decimal amount string to float64
+// Helper function for historical price calculation
+func parseDecimalAmount(amountStr string) (float64, error) {
+	if amountStr == "" {
+		return 0, fmt.Errorf("empty amount string")
+	}
+
+	amount, err := strconv.ParseFloat(amountStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse amount '%s': %w", amountStr, err)
+	}
+
+	return amount, nil
 }
