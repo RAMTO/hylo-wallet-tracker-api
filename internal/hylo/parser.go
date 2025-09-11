@@ -154,13 +154,22 @@ func ParseTransactionWithContext(ctx context.Context, tx *solana.TransactionDeta
 	// Set trade details
 	trade.SetTradeDetails(tradeSide, xsolAmount, counterAmount, counterAsset)
 
-	// Log successful trade parsing
+	// Calculate historical price for hyUSD trades
+	trade.HistoricalPriceUSD = CalculateHistoricalXSOLPrice(trade)
+
+	// Log successful trade parsing with historical price info
+	priceInfo := "N/A (SOL trade)"
+	if trade.HistoricalPriceUSD != nil {
+		priceInfo = fmt.Sprintf("$%s", *trade.HistoricalPriceUSD)
+	}
+
 	log.InfoContext(ctx, "Successfully parsed xSOL trade",
 		slog.String("signature", signature),
 		slog.String("side", tradeSide),
 		slog.Uint64("xsol_amount", xsolAmount),
 		slog.Uint64("counter_amount", counterAmount),
 		slog.String("counter_asset", counterAsset),
+		slog.String("historical_price", priceInfo),
 		slog.Duration("parse_time", time.Since(startTime)))
 
 	return &TradeParseResult{

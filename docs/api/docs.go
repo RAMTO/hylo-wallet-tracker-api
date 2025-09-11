@@ -206,11 +206,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "counterAsset": {
-                    "description": "\"SOL\" or \"hyUSD\"",
+                    "description": "\"SOL\", \"hyUSD\", \"USDC\", etc.",
                     "type": "string"
                 },
                 "explorerUrl": {
                     "description": "Solscan transaction URL",
+                    "type": "string"
+                },
+                "historical_price_usd": {
+                    "description": "Historical pricing (new field)",
                     "type": "string"
                 },
                 "side": {
