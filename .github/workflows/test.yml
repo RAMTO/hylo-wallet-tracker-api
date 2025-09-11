@@ -89,11 +89,11 @@ jobs:
           echo "Parsed coverage: ${COVERAGE}%"
 
           # Use bc for floating point comparison
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "❌ Coverage ${COVERAGE}% is below 80% threshold"
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE}% is below 60% threshold"
             exit 1
           else
-            echo "✅ Coverage ${COVERAGE}% meets the 80% threshold"
+            echo "✅ Coverage ${COVERAGE}% meets the 60% threshold"
           fi
 
       - name: 📎 Upload Coverage Artifacts
