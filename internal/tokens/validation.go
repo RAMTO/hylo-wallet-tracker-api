@@ -31,11 +31,11 @@ func SanitizeAddress(address string) (solana.Address, error) {
 	// Trim whitespace
 	cleaned := strings.TrimSpace(address)
 
-	// Check length (Solana addresses are 44 characters in base58)
-	if len(cleaned) != 44 {
+	// Check length (Solana addresses are 32-44 characters in base58)
+	if len(cleaned) < 32 || len(cleaned) > 44 {
 		return solana.Address(""), &AddressValidationError{
 			Address: address,
-			Reason:  fmt.Sprintf("invalid length: expected 44 characters, got %d", len(cleaned)),
+			Reason:  fmt.Sprintf("invalid length: expected 32-44 characters, got %d", len(cleaned)),
 		}
 	}
 
@@ -163,17 +163,17 @@ func SuggestCorrection(address string) []string {
 	var suggestions []string
 
 	// If too short, might be missing characters
-	if len(address) < 44 {
-		suggestions = append(suggestions, "Address too short - Solana addresses are exactly 44 characters")
+	if len(address) < 32 {
+		suggestions = append(suggestions, "Address too short - Solana addresses are 32-44 characters")
 	}
 
 	// If too long, might have extra characters
 	if len(address) > 44 {
 		trimmed := strings.TrimSpace(address)
-		if len(trimmed) == 44 {
+		if len(trimmed) >= 32 && len(trimmed) <= 44 {
 			suggestions = append(suggestions, fmt.Sprintf("Try removing whitespace: '%s'", trimmed))
 		} else {
-			suggestions = append(suggestions, "Address too long - Solana addresses are exactly 44 characters")
+			suggestions = append(suggestions, "Address too long - Solana addresses are 32-44 characters")
 		}
 	}
 
