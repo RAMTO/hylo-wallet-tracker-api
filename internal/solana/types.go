@@ -29,10 +29,11 @@ func (c Commitment) Validate() error {
 // Address represents a Solana public key/address
 type Address string
 
-// Validate checks if the address is a valid base58 encoded public key (44 characters)
+// Validate checks if the address is a valid base58 encoded public key (32-44 characters)
 func (a Address) Validate() error {
-	if len(string(a)) != 44 {
-		return fmt.Errorf("invalid address length: %d, expected 44", len(string(a)))
+	addrLen := len(string(a))
+	if addrLen < 32 || addrLen > 44 {
+		return fmt.Errorf("invalid address length: %d, expected 32-44", addrLen)
 	}
 	// Basic validation - could be enhanced with full base58 decoding
 	return nil
