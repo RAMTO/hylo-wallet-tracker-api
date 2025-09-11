@@ -3,6 +3,8 @@ package hylo
 import (
 	"fmt"
 	"time"
+
+	"hylo-wallet-tracker-api/internal/tokens"
 )
 
 // XSOLTrade represents a parsed xSOL trade transaction with all relevant details
@@ -16,7 +18,7 @@ type XSOLTrade struct {
 	Side          string `json:"side"`          // BUY or SELL (from constants)
 	XSOLAmount    string `json:"xsolAmount"`    // Formatted xSOL amount (e.g., "1.5")
 	CounterAmount string `json:"counterAmount"` // Formatted counter-asset amount
-	CounterAsset  string `json:"counterAsset"`  // "SOL" or "hyUSD"
+	CounterAsset  string `json:"counterAsset"`  // "SOL", "hyUSD", "USDC", etc.
 
 	// Display fields
 	Timestamp   time.Time `json:"timestamp"`   // Parsed timestamp
@@ -56,14 +58,16 @@ func (t *XSOLTrade) SetTradeDetails(side string, xsolAmount, counterAmount uint6
 	t.CounterAmountRaw = counterAmount
 	t.CounterAsset = counterAsset
 
-	// Format amounts for display (using 6 decimals for xSOL, 9 for SOL, 6 for hyUSD)
-	t.XSOLAmount = formatAmount(xsolAmount, 6) // xSOL has 6 decimals
+	// Format amounts for display using defined decimal constants
+	t.XSOLAmount = formatAmount(xsolAmount, tokens.XSOLDecimals)
 
 	switch counterAsset {
 	case "SOL":
-		t.CounterAmount = formatAmount(counterAmount, 9) // SOL has 9 decimals (lamports)
+		t.CounterAmount = formatAmount(counterAmount, tokens.SOLDecimals)
 	case "hyUSD":
-		t.CounterAmount = formatAmount(counterAmount, 6) // hyUSD has 6 decimals
+		t.CounterAmount = formatAmount(counterAmount, tokens.HyUSDDecimals)
+	case "USDC":
+		t.CounterAmount = formatAmount(counterAmount, tokens.USDCDecimals)
 	default:
 		t.CounterAmount = fmt.Sprintf("%d", counterAmount) // Raw amount as fallback
 	}
@@ -109,5 +113,5 @@ func (t *XSOLTrade) IsValidTrade() bool {
 	return t.Signature != "" &&
 		(t.Side == TradeSideBuy || t.Side == TradeSideSell) &&
 		t.XSOLAmountRaw > 0 &&
-		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD")
+		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD" || t.CounterAsset == "USDC")
 }

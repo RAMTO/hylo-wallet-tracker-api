@@ -22,6 +22,10 @@ func TestTokenConstants(t *testing.T) {
 		if err := XSOLMint.Validate(); err != nil {
 			t.Errorf("XSOLMint validation failed: %v", err)
 		}
+
+		if err := USDCMint.Validate(); err != nil {
+			t.Errorf("USDCMint validation failed: %v", err)
+		}
 	})
 
 	t.Run("token mint addresses match documentation", func(t *testing.T) {
@@ -46,8 +50,8 @@ func TestTokenConstants(t *testing.T) {
 	t.Run("supported tokens list", func(t *testing.T) {
 		supportedMints := GetSupportedTokenMints()
 
-		if len(supportedMints) != 3 {
-			t.Errorf("Expected 3 supported mints, got %d", len(supportedMints))
+		if len(supportedMints) != 4 {
+			t.Errorf("Expected 4 supported mints, got %d", len(supportedMints))
 		}
 
 		// Verify all expected mints are included
@@ -67,6 +71,10 @@ func TestTokenConstants(t *testing.T) {
 		if !mintMap[XSOLMint] {
 			t.Errorf("XSOLMint not found in supported mints")
 		}
+
+		if !mintMap[USDCMint] {
+			t.Errorf("USDCMint not found in supported mints")
+		}
 	})
 }
 
@@ -85,6 +93,10 @@ func TestTokenHelperFunctions(t *testing.T) {
 			t.Errorf("XSOLMint should be valid")
 		}
 
+		if !IsValidTokenMint(USDCMint) {
+			t.Errorf("USDCMint should be valid")
+		}
+
 		// Invalid mint
 		invalidMint := solana.Address("InvalidMintAddress12345678901234567890123")
 		if IsValidTokenMint(invalidMint) {
@@ -100,6 +112,7 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{HyUSDMint, HyUSDSymbol},
 			{SHyUSDMint, SHyUSDSymbol},
 			{XSOLMint, XSOLSymbol},
+			{USDCMint, USDCSymbol},
 			{solana.Address("InvalidMint123456789012345678901234567890"), ""},
 		}
 
@@ -120,6 +133,7 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{HyUSDMint, HyUSDDecimals},
 			{SHyUSDMint, SHyUSDDecimals},
 			{XSOLMint, XSOLDecimals},
+			{USDCMint, USDCDecimals},
 			{solana.Address("InvalidMint123456789012345678901234567890"), 0},
 		}
 
@@ -140,6 +154,7 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{HyUSDMint, HyUSDName},
 			{SHyUSDMint, SHyUSDName},
 			{XSOLMint, XSOLName},
+			{USDCMint, USDCName},
 			{solana.Address("InvalidMint123456789012345678901234567890"), ""},
 		}
 
@@ -667,8 +682,8 @@ func TestConfig(t *testing.T) {
 
 		// Test supported tokens list
 		supportedTokens := config.GetSupportedTokens()
-		if len(supportedTokens) != 3 {
-			t.Errorf("Expected 3 supported tokens, got %d", len(supportedTokens))
+		if len(supportedTokens) != 4 {
+			t.Errorf("Expected 4 supported tokens, got %d", len(supportedTokens))
 		}
 	})
 
@@ -757,12 +772,12 @@ func TestConfig(t *testing.T) {
 		config := NewConfig()
 
 		supportedMints := config.GetSupportedMints()
-		if len(supportedMints) != 3 {
-			t.Errorf("Expected 3 supported mints, got %d", len(supportedMints))
+		if len(supportedMints) != 4 {
+			t.Errorf("Expected 4 supported mints, got %d", len(supportedMints))
 		}
 
 		// Verify order and content
-		expectedMints := []solana.Address{HyUSDMint, SHyUSDMint, XSOLMint}
+		expectedMints := []solana.Address{HyUSDMint, SHyUSDMint, XSOLMint, USDCMint}
 		for i, expectedMint := range expectedMints {
 			if i >= len(supportedMints) || supportedMints[i] != expectedMint {
 				t.Errorf("Mint mismatch at index %d: expected %s, got %s",

@@ -168,7 +168,7 @@ func TestGetWalletATAs(t *testing.T) {
 		}
 
 		// Should have ATAs for all supported tokens
-		expectedTokens := []string{HyUSDSymbol, SHyUSDSymbol, XSOLSymbol}
+		expectedTokens := []string{HyUSDSymbol, SHyUSDSymbol, XSOLSymbol, USDCSymbol}
 
 		if len(atas) != len(expectedTokens) {
 			t.Errorf("Expected %d ATAs, got %d", len(expectedTokens), len(atas))

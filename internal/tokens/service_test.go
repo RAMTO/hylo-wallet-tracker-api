@@ -434,8 +434,8 @@ func TestBalanceService_GetSupportedTokens(t *testing.T) {
 
 	supportedTokens := service.GetSupportedTokens()
 
-	if len(supportedTokens) != 3 {
-		t.Errorf("Expected 3 supported tokens, got %d", len(supportedTokens))
+	if len(supportedTokens) != 4 {
+		t.Errorf("Expected 4 supported tokens, got %d", len(supportedTokens))
 	}
 
 	// Check that we have all expected tokens
@@ -444,7 +444,7 @@ func TestBalanceService_GetSupportedTokens(t *testing.T) {
 		symbols[token.Symbol] = true
 	}
 
-	expectedSymbols := []string{HyUSDSymbol, SHyUSDSymbol, XSOLSymbol}
+	expectedSymbols := []string{HyUSDSymbol, SHyUSDSymbol, XSOLSymbol, USDCSymbol}
 	for _, expectedSymbol := range expectedSymbols {
 		if !symbols[expectedSymbol] {
 			t.Errorf("Expected token symbol %s not found in supported tokens", expectedSymbol)

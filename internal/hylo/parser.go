@@ -270,7 +270,7 @@ func detectAssetType(accountAddress string) string {
 func detectTokenAssetType(mintAddress string) string {
 	mint := solana.Address(mintAddress)
 
-	// Check against known Hylo token mints
+	// Check against known token mints (Hylo protocol + supported external tokens)
 	switch mint {
 	case tokens.HyUSDMint:
 		return "hyUSD"
@@ -278,6 +278,8 @@ func detectTokenAssetType(mintAddress string) string {
 		return "sHYUSD"
 	case tokens.XSOLMint:
 		return "xSOL"
+	case tokens.USDCMint:
+		return "USDC"
 	default:
 		// Unknown token - could be wrapped SOL or other SPL tokens
 		// For now, we'll treat unknown tokens as generic tokens
