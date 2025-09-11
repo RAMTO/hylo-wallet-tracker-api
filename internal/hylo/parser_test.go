@@ -818,6 +818,11 @@ func TestDetectTokenAssetType(t *testing.T) {
 			expectedType: "xSOL",
 		},
 		{
+			name:         "jitoSOL mint",
+			mintAddress:  "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+			expectedType: "jitoSOL",
+		},
+		{
 			name:         "unknown token mint",
 			mintAddress:  "UnknownMintAddress1234567890123456789012345",
 			expectedType: "TOKEN",

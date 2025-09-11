@@ -26,6 +26,10 @@ func TestTokenConstants(t *testing.T) {
 		if err := USDCMint.Validate(); err != nil {
 			t.Errorf("USDCMint validation failed: %v", err)
 		}
+
+		if err := JitoSOLMint.Validate(); err != nil {
+			t.Errorf("JitoSOLMint validation failed: %v", err)
+		}
 	})
 
 	t.Run("token mint addresses match documentation", func(t *testing.T) {
@@ -50,8 +54,8 @@ func TestTokenConstants(t *testing.T) {
 	t.Run("supported tokens list", func(t *testing.T) {
 		supportedMints := GetSupportedTokenMints()
 
-		if len(supportedMints) != 4 {
-			t.Errorf("Expected 4 supported mints, got %d", len(supportedMints))
+		if len(supportedMints) != 5 {
+			t.Errorf("Expected 5 supported mints, got %d", len(supportedMints))
 		}
 
 		// Verify all expected mints are included
@@ -75,6 +79,10 @@ func TestTokenConstants(t *testing.T) {
 		if !mintMap[USDCMint] {
 			t.Errorf("USDCMint not found in supported mints")
 		}
+
+		if !mintMap[JitoSOLMint] {
+			t.Errorf("JitoSOLMint not found in supported mints")
+		}
 	})
 }
 
@@ -97,8 +105,12 @@ func TestTokenHelperFunctions(t *testing.T) {
 			t.Errorf("USDCMint should be valid")
 		}
 
+		if !IsValidTokenMint(JitoSOLMint) {
+			t.Errorf("JitoSOLMint should be valid")
+		}
+
 		// Invalid mint
-		invalidMint := solana.Address("InvalidMintAddress12345678901234567890123")
+		invalidMint := solana.Address(TestInvalidMint)
 		if IsValidTokenMint(invalidMint) {
 			t.Errorf("Invalid mint should not be valid")
 		}
@@ -113,7 +125,8 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{SHyUSDMint, SHyUSDSymbol},
 			{XSOLMint, XSOLSymbol},
 			{USDCMint, USDCSymbol},
-			{solana.Address("InvalidMint123456789012345678901234567890"), ""},
+			{JitoSOLMint, JitoSOLSymbol},
+			{solana.Address(TestInvalidMint), ""},
 		}
 
 		for _, tc := range testCases {
@@ -134,7 +147,8 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{SHyUSDMint, SHyUSDDecimals},
 			{XSOLMint, XSOLDecimals},
 			{USDCMint, USDCDecimals},
-			{solana.Address("InvalidMint123456789012345678901234567890"), 0},
+			{JitoSOLMint, JitoSOLDecimals},
+			{solana.Address(TestInvalidMint), 0},
 		}
 
 		for _, tc := range testCases {
@@ -155,7 +169,8 @@ func TestTokenHelperFunctions(t *testing.T) {
 			{SHyUSDMint, SHyUSDName},
 			{XSOLMint, XSOLName},
 			{USDCMint, USDCName},
-			{solana.Address("InvalidMint123456789012345678901234567890"), ""},
+			{JitoSOLMint, JitoSOLName},
+			{solana.Address(TestInvalidMint), ""},
 		}
 
 		for _, tc := range testCases {
@@ -191,7 +206,7 @@ func TestTokenInfo(t *testing.T) {
 			{
 				name: "invalid mint address",
 				tokenInfo: TokenInfo{
-					Mint:     solana.Address("invalid"),
+					Mint:     solana.Address(TestTooShortMint),
 					Symbol:   "TEST",
 					Name:     "Test Token",
 					Decimals: 6,
@@ -539,7 +554,7 @@ func TestWalletBalances(t *testing.T) {
 
 		// Test invalid wallet address
 		invalidWB := &WalletBalances{
-			Wallet:   solana.Address("invalid"),
+			Wallet:   solana.Address(TestTooShortMint), // Use invalid short address
 			Slot:     testSlot,
 			Balances: make(map[string]*TokenBalance),
 		}
@@ -607,51 +622,58 @@ func TestConfig(t *testing.T) {
 
 	t.Run("environment variable override", func(t *testing.T) {
 		// Set all environment variables
-		testHyUSDMint := "TestHyUSDMintAddress1234567890123456789012"
-		testSHyUSDMint := "TestSHyUSDMintAddress123456789012345678901"
-		testXSOLMint := "TestXSOLMintAddress1234567890123456789012"
-
-		os.Setenv("HYUSD_MINT", testHyUSDMint)
-		os.Setenv("SHYUSD_MINT", testSHyUSDMint)
-		os.Setenv("XSOL_MINT", testXSOLMint)
+		os.Setenv("HYUSD_MINT", TestHyUSDMintOverride)
+		os.Setenv("SHYUSD_MINT", TestSHyUSDMintOverride)
+		os.Setenv("XSOL_MINT", TestXSOLMintOverride)
+		os.Setenv("USDC_MINT", TestUSDCMintOverride)
+		os.Setenv("JITOSOL_MINT", TestJitoSOLMintOverride)
 
 		defer func() {
 			os.Unsetenv("HYUSD_MINT")
 			os.Unsetenv("SHYUSD_MINT")
 			os.Unsetenv("XSOL_MINT")
+			os.Unsetenv("USDC_MINT")
+			os.Unsetenv("JITOSOL_MINT")
 		}()
 
 		config := NewConfig()
 
-		if string(config.HyUSDMint) != testHyUSDMint {
+		if string(config.HyUSDMint) != TestHyUSDMintOverride {
 			t.Errorf("HYUSD_MINT override failed: expected %s, got %s",
-				testHyUSDMint, config.HyUSDMint)
+				TestHyUSDMintOverride, config.HyUSDMint)
 		}
 
-		if string(config.SHyUSDMint) != testSHyUSDMint {
+		if string(config.SHyUSDMint) != TestSHyUSDMintOverride {
 			t.Errorf("SHYUSD_MINT override failed: expected %s, got %s",
-				testSHyUSDMint, config.SHyUSDMint)
+				TestSHyUSDMintOverride, config.SHyUSDMint)
 		}
 
-		if string(config.XSOLMint) != testXSOLMint {
+		if string(config.XSOLMint) != TestXSOLMintOverride {
 			t.Errorf("XSOL_MINT override failed: expected %s, got %s",
-				testXSOLMint, config.XSOLMint)
+				TestXSOLMintOverride, config.XSOLMint)
+		}
+
+		if string(config.USDCMint) != TestUSDCMintOverride {
+			t.Errorf("USDC_MINT override failed: expected %s, got %s",
+				TestUSDCMintOverride, config.USDCMint)
+		}
+
+		if string(config.JitoSOLMint) != TestJitoSOLMintOverride {
+			t.Errorf("JITOSOL_MINT override failed: expected %s, got %s",
+				TestJitoSOLMintOverride, config.JitoSOLMint)
 		}
 	})
 
 	t.Run("environment variable with spaces", func(t *testing.T) {
 		// Test trimming of environment variables
-		testHyUSDMint := "  TestHyUSDMintAddress1234567890123456789012  "
-		expectedTrimmed := "TestHyUSDMintAddress1234567890123456789012"
-
-		os.Setenv("HYUSD_MINT", testHyUSDMint)
+		os.Setenv("HYUSD_MINT", TestMintWithSpaces)
 		defer os.Unsetenv("HYUSD_MINT")
 
 		config := NewConfig()
 
-		if string(config.HyUSDMint) != expectedTrimmed {
+		if string(config.HyUSDMint) != TestMintTrimmed {
 			t.Errorf("Environment variable should be trimmed: expected %s, got %s",
-				expectedTrimmed, config.HyUSDMint)
+				TestMintTrimmed, config.HyUSDMint)
 		}
 	})
 
@@ -668,7 +690,7 @@ func TestConfig(t *testing.T) {
 		}
 
 		// Test unsupported token
-		invalidMint := solana.Address("InvalidMint123456789012345678901234567890")
+		invalidMint := solana.Address(TestInvalidMint)
 		invalidInfo := config.GetTokenInfo(invalidMint)
 		if invalidInfo != nil {
 			t.Errorf("Should not find info for invalid mint")
@@ -682,17 +704,19 @@ func TestConfig(t *testing.T) {
 
 		// Test supported tokens list
 		supportedTokens := config.GetSupportedTokens()
-		if len(supportedTokens) != 4 {
-			t.Errorf("Expected 4 supported tokens, got %d", len(supportedTokens))
+		if len(supportedTokens) != 5 {
+			t.Errorf("Expected 5 supported tokens, got %d", len(supportedTokens))
 		}
 	})
 
 	t.Run("config validation errors", func(t *testing.T) {
 		// Test duplicate mint addresses
 		duplicateConfig := &Config{
-			HyUSDMint:  HyUSDMint,
-			SHyUSDMint: HyUSDMint, // Duplicate!
-			XSOLMint:   XSOLMint,
+			HyUSDMint:   HyUSDMint,
+			SHyUSDMint:  HyUSDMint, // Duplicate!
+			XSOLMint:    XSOLMint,
+			USDCMint:    USDCMint,
+			JitoSOLMint: JitoSOLMint,
 		}
 		duplicateConfig.buildTokenRegistry()
 
@@ -702,9 +726,11 @@ func TestConfig(t *testing.T) {
 
 		// Test invalid mint address lengths
 		invalidMintConfig := &Config{
-			HyUSDMint:  solana.Address("toolong"), // Too short
-			SHyUSDMint: SHyUSDMint,
-			XSOLMint:   XSOLMint,
+			HyUSDMint:   solana.Address(TestTooShortMint), // Too short
+			SHyUSDMint:  SHyUSDMint,
+			XSOLMint:    XSOLMint,
+			USDCMint:    USDCMint,
+			JitoSOLMint: JitoSOLMint,
 		}
 		invalidMintConfig.buildTokenRegistry()
 
@@ -723,7 +749,7 @@ func TestConfig(t *testing.T) {
 		}
 
 		// Test amount formatting for unsupported mint
-		invalidMint := solana.Address("InvalidMint123456789012345678901234567890")
+		invalidMint := solana.Address(TestInvalidMint)
 		formattedInvalid := config.FormatAmount(invalidMint, 1000000)
 		if formattedInvalid != "0" {
 			t.Errorf("Unsupported mint formatting should return '0', got %s", formattedInvalid)
@@ -761,8 +787,16 @@ func TestConfig(t *testing.T) {
 			t.Errorf("xSOL should be supported")
 		}
 
+		if !config.IsTokenSupported(USDCMint) {
+			t.Errorf("USDC should be supported")
+		}
+
+		if !config.IsTokenSupported(JitoSOLMint) {
+			t.Errorf("jitoSOL should be supported")
+		}
+
 		// Test unsupported token
-		invalidMint := solana.Address("InvalidMint123456789012345678901234567890")
+		invalidMint := solana.Address(TestInvalidMint)
 		if config.IsTokenSupported(invalidMint) {
 			t.Errorf("Invalid mint should not be supported")
 		}
@@ -772,12 +806,12 @@ func TestConfig(t *testing.T) {
 		config := NewConfig()
 
 		supportedMints := config.GetSupportedMints()
-		if len(supportedMints) != 4 {
-			t.Errorf("Expected 4 supported mints, got %d", len(supportedMints))
+		if len(supportedMints) != 5 {
+			t.Errorf("Expected 5 supported mints, got %d", len(supportedMints))
 		}
 
 		// Verify order and content
-		expectedMints := []solana.Address{HyUSDMint, SHyUSDMint, XSOLMint, USDCMint}
+		expectedMints := []solana.Address{HyUSDMint, SHyUSDMint, XSOLMint, USDCMint, JitoSOLMint}
 		for i, expectedMint := range expectedMints {
 			if i >= len(supportedMints) || supportedMints[i] != expectedMint {
 				t.Errorf("Mint mismatch at index %d: expected %s, got %s",
@@ -831,7 +865,7 @@ func TestConfig(t *testing.T) {
 		}
 
 		// Test NewTokenBalance with unsupported mint
-		invalidMint := solana.Address("InvalidMint123456789012345678901234567890")
+		invalidMint := solana.Address(TestInvalidMint)
 		invalidBalance := config.NewTokenBalance(invalidMint, 1000000)
 		if invalidBalance != nil {
 			t.Errorf("NewTokenBalance should return nil for unsupported mint")

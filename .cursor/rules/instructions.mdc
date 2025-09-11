@@ -21,3 +21,4 @@ alwaysApply: true
 - When writing tests, use or add constant, do not use magic numbers
 - For API responses always use structures and type, use helpers and always write conststent error habdling and response code
 - Do not update the progress/plan after code update until approved from user
+- When writing tests, please get the testing address or variables from the test_constants.go file, if not present add them
