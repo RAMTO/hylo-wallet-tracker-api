@@ -1,9 +1,13 @@
 package tokens
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
+	"time"
 
+	"hylo-wallet-tracker-api/internal/logger"
 	solanainternal "hylo-wallet-tracker-api/internal/solana"
 
 	"github.com/gagliardetto/solana-go"
@@ -48,30 +52,55 @@ type SPLTokenAccount struct {
 // ParseSPLTokenAccount parses SPL token account data from Solana AccountInfo
 // Returns the parsed token account structure or error if data is invalid
 func ParseSPLTokenAccount(accountInfo *solanainternal.AccountInfo) (*SPLTokenAccount, error) {
+	return ParseSPLTokenAccountWithContext(context.Background(), accountInfo, nil)
+}
+
+// ParseSPLTokenAccountWithContext parses SPL token account data with logging context
+func ParseSPLTokenAccountWithContext(ctx context.Context, accountInfo *solanainternal.AccountInfo, log *logger.Logger) (*SPLTokenAccount, error) {
+	startTime := time.Now()
+
+	// Use default logger if none provided
+	if log == nil {
+		log = logger.NewFromEnv().WithComponent("token-parser")
+	}
+
+	log.DebugContext(ctx, "Starting SPL token account parsing",
+		slog.String("owner", string(accountInfo.Owner)),
+		slog.Int("data_size", len(accountInfo.Data)))
+
 	// Validate account owner is SPL Token Program
 	if accountInfo.Owner != SPLTokenProgramID {
-		return nil, fmt.Errorf("invalid token account owner: expected %s, got %s",
+		err := fmt.Errorf("invalid token account owner: expected %s, got %s",
 			SPLTokenProgramID, accountInfo.Owner)
+		log.LogParsingError(ctx, "parse_spl_token_account", "account_owner", err,
+			slog.String("expected_owner", string(SPLTokenProgramID)),
+			slog.String("actual_owner", string(accountInfo.Owner)))
+		return nil, err
 	}
 
 	// Validate account data size
 	if len(accountInfo.Data) != SPLTokenAccountSize {
-		return nil, fmt.Errorf("invalid token account data size: expected %d bytes, got %d",
+		err := fmt.Errorf("invalid token account data size: expected %d bytes, got %d",
 			SPLTokenAccountSize, len(accountInfo.Data))
+		log.LogParsingError(ctx, "parse_spl_token_account", "data_size", err,
+			slog.Int("expected_size", SPLTokenAccountSize),
+			slog.Int("actual_size", len(accountInfo.Data)))
+		return nil, err
 	}
 
 	// Extract mint address (bytes 0-31)
 	mintBytes := accountInfo.Data[MintOffset : MintOffset+32]
-	mint, err := bytesToAddress(mintBytes)
+	mint, err := bytesToAddressWithLogging(ctx, mintBytes, log, "mint")
 	if err != nil {
+		log.LogParsingError(ctx, "parse_spl_token_account", "mint_address", err)
 		return nil, fmt.Errorf("failed to parse mint address: %w", err)
 	}
-	// fmt.Printf("DEBUG: Parsed mint from account data: %s\n", mint)
 
 	// Extract owner address (bytes 32-63)
 	ownerBytes := accountInfo.Data[OwnerOffset : OwnerOffset+32]
-	owner, err := bytesToAddress(ownerBytes)
+	owner, err := bytesToAddressWithLogging(ctx, ownerBytes, log, "owner")
 	if err != nil {
+		log.LogParsingError(ctx, "parse_spl_token_account", "owner_address", err)
 		return nil, fmt.Errorf("failed to parse owner address: %w", err)
 	}
 
@@ -85,14 +114,26 @@ func ParseSPLTokenAccount(accountInfo *solanainternal.AccountInfo) (*SPLTokenAcc
 	isInitialized := state == TokenStateInitialized || state == TokenStateFrozen
 	isFrozen := state == TokenStateFrozen
 
-	return &SPLTokenAccount{
+	account := &SPLTokenAccount{
 		Mint:          mint,
 		Owner:         owner,
 		Amount:        amount,
 		State:         state,
 		IsInitialized: isInitialized,
 		IsFrozen:      isFrozen,
-	}, nil
+	}
+
+	// Log successful parsing
+	log.InfoContext(ctx, "Successfully parsed SPL token account",
+		slog.String("mint", mint.String()),
+		slog.String("owner", owner.String()),
+		slog.Uint64("amount", amount),
+		slog.Int("state", int(state)),
+		slog.Bool("is_initialized", isInitialized),
+		slog.Bool("is_frozen", isFrozen),
+		slog.Duration("parse_time", time.Since(startTime)))
+
+	return account, nil
 }
 
 // bytesToAddress converts 32-byte slice to base58-encoded Solana Address
@@ -101,15 +142,38 @@ func bytesToAddress(bytes []byte) (solanainternal.Address, error) {
 		return "", fmt.Errorf("invalid address length: expected 32 bytes, got %d", len(bytes))
 	}
 
-	// Debug: Show the raw bytes
-	// fmt.Printf("DEBUG: bytesToAddress input bytes (first 8): %v\n", bytes[:8])
-
 	// Convert bytes to Solana PublicKey and then to string
 	pubkey := solana.PublicKeyFromBytes(bytes)
 	encoded := pubkey.String()
 
-	// fmt.Printf("DEBUG: bytesToAddress result: %s\n", encoded)
 	return solanainternal.Address(encoded), nil
+}
+
+// bytesToAddressWithLogging wraps bytesToAddress with logging
+func bytesToAddressWithLogging(ctx context.Context, bytes []byte, log *logger.Logger, addressType string) (solanainternal.Address, error) {
+	log.DebugContext(ctx, "Converting bytes to address",
+		slog.String("address_type", addressType),
+		slog.Int("byte_length", len(bytes)))
+
+	if len(bytes) != 32 {
+		err := fmt.Errorf("invalid address length: expected 32 bytes, got %d", len(bytes))
+		log.LogParsingError(ctx, "bytes_to_address", addressType, err,
+			slog.Int("expected_length", 32),
+			slog.Int("actual_length", len(bytes)))
+		return "", err
+	}
+
+	address, err := bytesToAddress(bytes)
+	if err != nil {
+		log.LogParsingError(ctx, "bytes_to_address", addressType, err)
+		return "", err
+	}
+
+	log.DebugContext(ctx, "Successfully converted bytes to address",
+		slog.String("address_type", addressType),
+		slog.String("address", address.String()))
+
+	return address, nil
 }
 
 // ValidateTokenAccount performs additional validation on a parsed token account

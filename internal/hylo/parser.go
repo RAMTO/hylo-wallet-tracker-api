@@ -1,9 +1,13 @@
 package hylo
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
+	"time"
 
+	"hylo-wallet-tracker-api/internal/logger"
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
 )
@@ -11,36 +15,66 @@ import (
 // ParseTransaction analyzes a Solana transaction to determine if it contains an xSOL trade
 // It uses balance-change analysis to identify BUY/SELL operations and calculate amounts
 func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Address) (*TradeParseResult, error) {
+	return ParseTransactionWithContext(context.Background(), tx, walletXSOLATA, nil)
+}
+
+// ParseTransactionWithContext analyzes a Solana transaction with logging context
+func ParseTransactionWithContext(ctx context.Context, tx *solana.TransactionDetails, walletXSOLATA solana.Address, log *logger.Logger) (*TradeParseResult, error) {
+	startTime := time.Now()
+
+	// Use default logger if none provided
+	if log == nil {
+		log = logger.NewFromEnv().WithComponent("hylo-parser")
+	}
+
+	// Get transaction signature for logging
+	signature := ""
+	if tx != nil && len(tx.Transaction.Signatures) > 0 {
+		signature = tx.Transaction.Signatures[0]
+	}
+
+	log.DebugContext(ctx, "Starting transaction parsing",
+		slog.String("signature", signature),
+		slog.String("ata_address", walletXSOLATA.String()))
+
 	// Validate input parameters
 	if tx == nil {
+		log.LogParsingError(ctx, "parse_transaction", "transaction_details", fmt.Errorf("transaction details cannot be nil"))
 		return nil, fmt.Errorf("transaction details cannot be nil")
 	}
 	if tx.Meta == nil {
+		log.LogParsingError(ctx, "parse_transaction", "transaction_meta", fmt.Errorf("transaction metadata cannot be nil"),
+			slog.String("signature", signature))
 		return nil, fmt.Errorf("transaction metadata cannot be nil")
 	}
 	if walletXSOLATA == "" {
+		log.LogValidationError(ctx, "parse_transaction", "ata_address", walletXSOLATA, fmt.Errorf("wallet xSOL ATA address cannot be empty"))
 		return nil, fmt.Errorf("wallet xSOL ATA address cannot be empty")
 	}
 
 	// Check if transaction failed
 	if tx.Meta.Err != nil {
+		log.WarnContext(ctx, "Transaction failed, skipping trade parsing",
+			slog.String("signature", signature),
+			slog.Any("error", tx.Meta.Err))
 		return &TradeParseResult{
 			Error: "transaction failed",
 		}, nil
 	}
 
-	// Get transaction signature
-	signature := ""
-	if len(tx.Transaction.Signatures) > 0 {
-		signature = tx.Transaction.Signatures[0]
-	}
-
 	// Find xSOL ATA in account keys
 	xsolAccountIndex := findAccountIndex(tx.Transaction.Message.AccountKeys, string(walletXSOLATA))
 	if xsolAccountIndex == -1 {
+		log.DebugContext(ctx, "Transaction doesn't involve wallet's xSOL account",
+			slog.String("signature", signature),
+			slog.String("ata_address", walletXSOLATA.String()))
 		// This transaction doesn't involve the wallet's xSOL account
 		return &TradeParseResult{}, nil
 	}
+
+	log.DebugContext(ctx, "Found xSOL account in transaction",
+		slog.String("signature", signature),
+		slog.Int("account_index", xsolAccountIndex))
 
 	// Look for xSOL token balance changes in pre/post token balances
 	preTokenBalance := findTokenBalance(tx.Meta.PreTokenBalances, uint32(xsolAccountIndex))
@@ -48,19 +82,27 @@ func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Addres
 
 	// If no token balance data found, this is not a token trade
 	if preTokenBalance == nil || postTokenBalance == nil {
+		log.DebugContext(ctx, "No token balance data found, not a token trade",
+			slog.String("signature", signature),
+			slog.Bool("has_pre_balance", preTokenBalance != nil),
+			slog.Bool("has_post_balance", postTokenBalance != nil))
 		return &TradeParseResult{}, nil
 	}
 
 	// Parse token amounts
-	preAmount, err := parseTokenAmount(preTokenBalance.UITokenAmount)
+	preAmount, err := parseTokenAmountWithLogging(ctx, preTokenBalance.UITokenAmount, log, "pre-amount")
 	if err != nil {
+		log.LogParsingError(ctx, "parse_transaction", "pre_token_amount", err,
+			slog.String("signature", signature))
 		return &TradeParseResult{
 			Error: fmt.Sprintf("failed to parse pre-token amount: %v", err),
 		}, nil
 	}
 
-	postAmount, err := parseTokenAmount(postTokenBalance.UITokenAmount)
+	postAmount, err := parseTokenAmountWithLogging(ctx, postTokenBalance.UITokenAmount, log, "post-amount")
 	if err != nil {
+		log.LogParsingError(ctx, "parse_transaction", "post_token_amount", err,
+			slog.String("signature", signature))
 		return &TradeParseResult{
 			Error: fmt.Sprintf("failed to parse post-token amount: %v", err),
 		}, nil
@@ -68,6 +110,9 @@ func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Addres
 
 	// If no token balance change in xSOL, this is not a trade
 	if preAmount == postAmount {
+		log.DebugContext(ctx, "No xSOL balance change detected, not a trade",
+			slog.String("signature", signature),
+			slog.Uint64("amount", preAmount))
 		return &TradeParseResult{}, nil
 	}
 
@@ -87,17 +132,36 @@ func ParseTransaction(tx *solana.TransactionDetails, walletXSOLATA solana.Addres
 		// xSOL balance increased = BUY trade
 		tradeSide = TradeSideBuy
 		xsolAmount = postAmount - preAmount
+		log.DebugContext(ctx, "Detected BUY trade",
+			slog.String("signature", signature),
+			slog.Uint64("pre_amount", preAmount),
+			slog.Uint64("post_amount", postAmount),
+			slog.Uint64("xsol_amount", xsolAmount))
 	} else {
 		// xSOL balance decreased = SELL trade
 		tradeSide = TradeSideSell
 		xsolAmount = preAmount - postAmount
+		log.DebugContext(ctx, "Detected SELL trade",
+			slog.String("signature", signature),
+			slog.Uint64("pre_amount", preAmount),
+			slog.Uint64("post_amount", postAmount),
+			slog.Uint64("xsol_amount", xsolAmount))
 	}
 
 	// Analyze other account balance changes to determine counter-asset
-	counterAmount, counterAsset := analyzeCounterAssetChanges(tx, xsolAccountIndex, tradeSide)
+	counterAmount, counterAsset := analyzeCounterAssetChangesWithLogging(ctx, tx, xsolAccountIndex, tradeSide, log)
 
 	// Set trade details
 	trade.SetTradeDetails(tradeSide, xsolAmount, counterAmount, counterAsset)
+
+	// Log successful trade parsing
+	log.InfoContext(ctx, "Successfully parsed xSOL trade",
+		slog.String("signature", signature),
+		slog.String("side", tradeSide),
+		slog.Uint64("xsol_amount", xsolAmount),
+		slog.Uint64("counter_amount", counterAmount),
+		slog.String("counter_asset", counterAsset),
+		slog.Duration("parse_time", time.Since(startTime)))
 
 	return &TradeParseResult{
 		Trade: trade,
@@ -330,6 +394,47 @@ func parseTokenAmount(uiTokenAmount *solana.UITokenAmount) (uint64, error) {
 	}
 
 	return amount, nil
+}
+
+// parseTokenAmountWithLogging wraps parseTokenAmount with logging
+func parseTokenAmountWithLogging(ctx context.Context, uiTokenAmount *solana.UITokenAmount, log *logger.Logger, amountType string) (uint64, error) {
+	if uiTokenAmount == nil {
+		log.LogParsingError(ctx, "parse_token_amount", amountType, fmt.Errorf("UITokenAmount is nil"))
+		return 0, fmt.Errorf("UITokenAmount is nil")
+	}
+
+	log.DebugContext(ctx, "Parsing token amount",
+		slog.String("amount_type", amountType),
+		slog.String("raw_amount", uiTokenAmount.Amount),
+		slog.Int("decimals", int(uiTokenAmount.Decimals)))
+
+	amount, err := parseTokenAmount(uiTokenAmount)
+	if err != nil {
+		log.LogParsingError(ctx, "parse_token_amount", amountType, err,
+			slog.String("raw_amount", uiTokenAmount.Amount))
+		return 0, err
+	}
+
+	log.DebugContext(ctx, "Successfully parsed token amount",
+		slog.String("amount_type", amountType),
+		slog.Uint64("parsed_amount", amount))
+
+	return amount, nil
+}
+
+// analyzeCounterAssetChangesWithLogging wraps analyzeCounterAssetChanges with logging
+func analyzeCounterAssetChangesWithLogging(ctx context.Context, tx *solana.TransactionDetails, xsolIndex int, tradeSide string, log *logger.Logger) (uint64, string) {
+	log.DebugContext(ctx, "Analyzing counter asset changes",
+		slog.Int("xsol_index", xsolIndex),
+		slog.String("trade_side", tradeSide))
+
+	counterAmount, counterAsset := analyzeCounterAssetChanges(tx, xsolIndex, tradeSide)
+
+	log.DebugContext(ctx, "Counter asset analysis completed",
+		slog.Uint64("counter_amount", counterAmount),
+		slog.String("counter_asset", counterAsset))
+
+	return counterAmount, counterAsset
 }
 
 // ValidateTradeTransaction performs additional validation on a parsed trade

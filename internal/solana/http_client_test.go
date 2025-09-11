@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"hylo-wallet-tracker-api/internal/logger"
 )
 
 func TestNewHTTPClient(t *testing.T) {
@@ -38,7 +40,7 @@ func TestNewHTTPClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewHTTPClient(tt.config)
+			client, err := NewHTTPClient(tt.config, logger.NewFromEnv())
 			if tt.expectError {
 				if err == nil {
 					t.Error("expected error but got nil")
@@ -127,7 +129,7 @@ func TestHTTPClient_GetAccount(t *testing.T) {
 
 			// Create client
 			config := NewConfig(server.URL, "ws://unused")
-			client, err := NewHTTPClient(config)
+			client, err := NewHTTPClient(config, logger.NewFromEnv())
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
@@ -220,7 +222,7 @@ func TestHTTPClient_GetSignaturesForAddress(t *testing.T) {
 
 			// Create client
 			config := NewConfig(server.URL, "ws://unused")
-			client, err := NewHTTPClient(config)
+			client, err := NewHTTPClient(config, logger.NewFromEnv())
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
@@ -284,7 +286,7 @@ func TestHTTPClient_RetryLogic(t *testing.T) {
 	config.MaxBackoff = 50 * time.Millisecond
 	config.MaxRetries = 3
 
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -342,7 +344,7 @@ func TestHTTPClient_GetTransaction(t *testing.T) {
 			defer server.Close()
 
 			config := NewConfig(server.URL, "ws://unused")
-			client, err := NewHTTPClient(config)
+			client, err := NewHTTPClient(config, logger.NewFromEnv())
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
@@ -390,7 +392,7 @@ func TestHTTPClient_MaxRetriesExceeded(t *testing.T) {
 	config.MaxBackoff = 5 * time.Millisecond
 	config.MaxRetries = 2
 
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -420,7 +422,7 @@ func TestHTTPClient_ContextTimeout(t *testing.T) {
 
 	// Create client
 	config := NewConfig(server.URL, "ws://unused")
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -452,7 +454,7 @@ func TestHTTPClient_ContextCancellation(t *testing.T) {
 
 	// Create client
 	config := NewConfig(server.URL, "ws://unused")
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -514,7 +516,7 @@ func TestHTTPClient_Health(t *testing.T) {
 			defer server.Close()
 
 			config := NewConfig(server.URL, "ws://unused")
-			client, err := NewHTTPClient(config)
+			client, err := NewHTTPClient(config, logger.NewFromEnv())
 			if err != nil {
 				t.Fatalf("failed to create client: %v", err)
 			}
@@ -648,7 +650,7 @@ func TestBackoffCalculation(t *testing.T) {
 	config.BaseBackoff = 1 * time.Second
 	config.MaxBackoff = 10 * time.Second
 
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
@@ -718,7 +720,7 @@ func TestErrors_AdditionalCoverage(t *testing.T) {
 
 func TestHTTPClient_Close(t *testing.T) {
 	config := NewConfig("http://localhost:8899", "ws://localhost:8900")
-	client, err := NewHTTPClient(config)
+	client, err := NewHTTPClient(config, logger.NewFromEnv())
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}

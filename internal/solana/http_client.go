@@ -203,7 +203,7 @@ func (c *HTTPClient) request(ctx context.Context, method string, params interfac
 					slog.Duration("total_time", totalTime),
 					slog.Int("attempts", attempt+1))
 			} else {
-				c.logger.InfoContext(ctx, "Solana RPC request completed",
+				c.logger.DebugContext(ctx, "Solana RPC request completed",
 					slog.String("method", method),
 					slog.Duration("total_time", totalTime),
 					slog.Int("attempts", attempt+1))

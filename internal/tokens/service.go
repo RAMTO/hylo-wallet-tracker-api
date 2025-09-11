@@ -122,12 +122,9 @@ func (s *TokenService) GetTokenBalance(ctx context.Context, wallet solana.Addres
 		return nil, fmt.Errorf("failed to fetch token account: %w", err)
 	}
 
-	// Parse SPL token account data
-	tokenAccount, err := ParseSPLTokenAccount(accountInfo)
+	// Parse SPL token account data with logging context
+	tokenAccount, err := ParseSPLTokenAccountWithContext(ctx, accountInfo, s.logger)
 	if err != nil {
-		s.logger.LogParsingError(ctx, "get_token_balance", "spl_token_account", err,
-			slog.String("ata_address", ataAddress.String()),
-			slog.String("token", tokenInfo.Symbol))
 		return nil, fmt.Errorf("failed to parse token account: %w", err)
 	}
 

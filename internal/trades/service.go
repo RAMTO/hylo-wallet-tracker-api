@@ -181,15 +181,18 @@ func (s *TradeService) processSignatures(ctx context.Context, signatures []solan
 		// Fetch transaction details
 		tx, err := s.httpClient.GetTransaction(ctx, solana.Signature(sigInfo.Signature))
 		if err != nil {
-			// Log the error but continue processing other transactions
-			// In a production system, you might want to use structured logging here
+			s.logger.WarnContext(ctx, "Failed to fetch transaction details, continuing with others",
+				slog.String("signature", sigInfo.Signature),
+				slog.String("error", err.Error()))
 			continue
 		}
 
-		// Parse the transaction for xSOL trades
-		parseResult, err := hylo.ParseTransaction(tx, xsolATA)
+		// Parse the transaction for xSOL trades with logging context
+		parseResult, err := hylo.ParseTransactionWithContext(ctx, tx, xsolATA, s.logger)
 		if err != nil {
-			// Continue processing other transactions if one fails to parse
+			s.logger.WarnContext(ctx, "Failed to parse transaction, continuing with others",
+				slog.String("signature", sigInfo.Signature),
+				slog.String("error", err.Error()))
 			continue
 		}
 
@@ -197,10 +200,22 @@ func (s *TradeService) processSignatures(ctx context.Context, signatures []solan
 		if parseResult != nil && parseResult.Trade != nil {
 			trades = append(trades, parseResult.Trade)
 
+			s.logger.DebugContext(ctx, "Successfully parsed and added trade",
+				slog.String("signature", sigInfo.Signature),
+				slog.String("side", parseResult.Trade.Side),
+				slog.String("xsol_amount", parseResult.Trade.XSOLAmount))
+
 			// Stop if we've reached the requested limit
 			if len(trades) >= maxTrades {
+				s.logger.DebugContext(ctx, "Reached trade limit, stopping processing",
+					slog.Int("trades_found", len(trades)),
+					slog.Int("limit", maxTrades))
 				break
 			}
+		} else if parseResult != nil && parseResult.Error != "" {
+			s.logger.DebugContext(ctx, "Transaction parsing returned error",
+				slog.String("signature", sigInfo.Signature),
+				slog.String("parse_error", parseResult.Error))
 		}
 	}
 
