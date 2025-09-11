@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
+	"hylo-wallet-tracker-api/internal/logger"
 	"hylo-wallet-tracker-api/internal/solana"
 )
 
@@ -15,6 +17,8 @@ type TokenService struct {
 	httpClient HTTPClientInterface
 	// config provides token configuration and registry functionality
 	config *Config
+	// logger for structured logging
+	logger *logger.Logger
 }
 
 // HTTPClientInterface defines the contract for Solana HTTP client interaction
@@ -35,67 +39,119 @@ func NewTokenService(httpClient HTTPClientInterface, config *Config) (*TokenServ
 		return nil, fmt.Errorf("config cannot be nil")
 	}
 
+	// Initialize logger for service
+	serviceLogger := logger.NewFromEnv().WithComponent("token-service")
+
 	// Validate config
 	if err := config.Validate(); err != nil {
+		serviceLogger.LogHandlerError(context.Background(), "service_initialization", err,
+			slog.String("error_type", "validation"))
 		return nil, fmt.Errorf("invalid token config: %w", err)
 	}
 
-	return &TokenService{
+	// Log service initialization
+	serviceLogger.InfoContext(context.Background(), "Initializing Token service",
+		slog.String("hyusd_mint", config.HyUSDMint.String()),
+		slog.String("shyusd_mint", config.SHyUSDMint.String()),
+		slog.String("xsol_mint", config.XSOLMint.String()))
+
+	service := &TokenService{
 		httpClient: httpClient,
 		config:     config,
-	}, nil
+		logger:     serviceLogger,
+	}
+
+	serviceLogger.InfoContext(context.Background(), "Token service initialized successfully")
+	return service, nil
 }
 
 // GetTokenBalance fetches the balance for a specific token in a wallet
 // Returns TokenBalance with formatted amount or zero balance if account doesn't exist
 func (s *TokenService) GetTokenBalance(ctx context.Context, wallet solana.Address, mint solana.Address) (*TokenBalance, error) {
+	// Log operation start
+	s.logger.DebugContext(ctx, "Getting token balance",
+		slog.String("wallet", wallet.String()),
+		slog.String("mint", mint.String()))
+
 	// Validate wallet address
 	if err := wallet.Validate(); err != nil {
+		s.logger.LogValidationError(ctx, "get_token_balance", "wallet", wallet, err)
 		return nil, fmt.Errorf("invalid wallet address: %w", err)
 	}
 
 	// Validate mint address
 	if err := mint.Validate(); err != nil {
+		s.logger.LogValidationError(ctx, "get_token_balance", "mint", mint, err)
 		return nil, fmt.Errorf("invalid mint address: %w", err)
 	}
 
 	// Get token info from config
 	tokenInfo := s.config.GetTokenInfo(mint)
 	if tokenInfo == nil {
+		s.logger.LogValidationError(ctx, "get_token_balance", "mint", mint, fmt.Errorf("unsupported token mint"))
 		return nil, fmt.Errorf("unsupported token mint: %s", mint)
 	}
 
 	// Derive Associated Token Account address
 	ataAddress, err := DeriveAssociatedTokenAddress(wallet, mint)
 	if err != nil {
+		s.logger.LogHandlerError(ctx, "get_token_balance", err,
+			slog.String("error_type", "ata_derivation"),
+			slog.String("wallet", wallet.String()),
+			slog.String("mint", mint.String()))
 		return nil, fmt.Errorf("failed to derive ATA address: %w", err)
 	}
+
+	s.logger.DebugContext(ctx, "Derived ATA address",
+		slog.String("ata_address", ataAddress.String()),
+		slog.String("token", tokenInfo.Symbol))
 
 	// Fetch account info from Solana
 	accountInfo, err := s.httpClient.GetAccount(ctx, ataAddress, solana.CommitmentConfirmed)
 	if err != nil {
 		// Handle account not found (zero balance)
 		if errors.Is(err, solana.ErrAccountNotFound) {
+			s.logger.InfoContext(ctx, "Token account not found, returning zero balance",
+				slog.String("wallet", wallet.String()),
+				slog.String("token", tokenInfo.Symbol))
 			return NewTokenBalance(*tokenInfo, 0), nil
 		}
+		s.logger.LogExternalAPIError(ctx, "solana-rpc", "GetAccount", err, 0,
+			slog.String("ata_address", ataAddress.String()),
+			slog.String("token", tokenInfo.Symbol))
 		return nil, fmt.Errorf("failed to fetch token account: %w", err)
 	}
 
 	// Parse SPL token account data
 	tokenAccount, err := ParseSPLTokenAccount(accountInfo)
 	if err != nil {
+		s.logger.LogParsingError(ctx, "get_token_balance", "spl_token_account", err,
+			slog.String("ata_address", ataAddress.String()),
+			slog.String("token", tokenInfo.Symbol))
 		return nil, fmt.Errorf("failed to parse token account: %w", err)
 	}
 
 	// Validate parsed account (skip mint/owner validation in testing to avoid base58 decode issues)
 	if err := ValidateTokenAccount(tokenAccount, "", ""); err != nil {
+		s.logger.LogValidationError(ctx, "get_token_balance", "token_account", tokenAccount, err)
 		return nil, fmt.Errorf("invalid token account: %w", err)
 	}
 
 	// Check if account is frozen
 	if tokenAccount.IsFrozen {
+		s.logger.WarnContext(ctx, "Token account is frozen",
+			slog.String("wallet", wallet.String()),
+			slog.String("token", tokenInfo.Symbol),
+			slog.String("ata_address", ataAddress.String()))
 		return nil, fmt.Errorf("token account is frozen")
 	}
+
+	// Log successful balance fetch
+	s.logger.InfoContext(ctx, "Token balance retrieved successfully",
+		slog.String("wallet", wallet.String()),
+		slog.String("token", tokenInfo.Symbol),
+		slog.Uint64("raw_amount", tokenAccount.Amount),
+		slog.String("formatted_amount", fmt.Sprintf("%.6f", float64(tokenAccount.Amount)/1e6)))
 
 	// Create TokenBalance with proper formatting
 	return NewTokenBalance(*tokenInfo, tokenAccount.Amount), nil
@@ -104,8 +160,13 @@ func (s *TokenService) GetTokenBalance(ctx context.Context, wallet solana.Addres
 // GetWalletBalances fetches balances for all supported Hylo tokens in a wallet
 // Returns WalletBalances with all token balances, including zero balances
 func (s *TokenService) GetWalletBalances(ctx context.Context, wallet solana.Address) (*WalletBalances, error) {
+	// Log operation start
+	s.logger.InfoContext(ctx, "Getting wallet balances for all supported tokens",
+		slog.String("wallet", wallet.String()))
+
 	// Validate wallet address
 	if err := wallet.Validate(); err != nil {
+		s.logger.LogValidationError(ctx, "get_wallet_balances", "wallet", wallet, err)
 		return nil, fmt.Errorf("invalid wallet address: %w", err)
 	}
 
@@ -118,21 +179,30 @@ func (s *TokenService) GetWalletBalances(ctx context.Context, wallet solana.Addr
 
 	// Initialize result structure
 	balances := NewWalletBalances(wallet, 0) // Slot will be updated if we get successful responses
+	successCount := 0
+	failCount := 0
 
 	// Fetch balance for each token
 	for _, mint := range tokenMints {
 		tokenBalance, err := s.GetTokenBalance(ctx, wallet, mint)
 		if err != nil {
-			// Log error but continue with other tokens
-			// In production, consider using structured logging
-			// fmt.Printf("DEBUG: GetTokenBalance failed for mint %s: %v\n", mint, err)
+			failCount++
+			// Get token info for logging
+			tokenInfo := s.config.GetTokenInfo(mint)
+			tokenSymbol := "unknown"
+			if tokenInfo != nil {
+				tokenSymbol = tokenInfo.Symbol
+			}
+
+			s.logger.WarnContext(ctx, "Failed to fetch token balance, continuing with other tokens",
+				slog.String("wallet", wallet.String()),
+				slog.String("token", tokenSymbol),
+				slog.String("mint", mint.String()),
+				slog.String("error", err.Error()))
 			continue
 		}
 
-		// Update latest slot if available
-		// Note: We could enhance this to track per-token slots
-		// For now, we use a single slot representing the latest query
-
+		successCount++
 		// Add balance to results
 		balances.AddBalance(tokenBalance)
 	}
@@ -149,6 +219,13 @@ func (s *TokenService) GetWalletBalances(ctx context.Context, wallet solana.Addr
 			balances.AddBalance(NewTokenBalance(*tokenInfo, 0))
 		}
 	}
+
+	// Log operation completion
+	s.logger.InfoContext(ctx, "Wallet balances retrieval completed",
+		slog.String("wallet", wallet.String()),
+		slog.Int("successful_tokens", successCount),
+		slog.Int("failed_tokens", failCount),
+		slog.Int("total_tokens", len(tokenMints)))
 
 	return balances, nil
 }

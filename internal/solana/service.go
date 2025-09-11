@@ -3,14 +3,18 @@ package solana
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
+
+	"hylo-wallet-tracker-api/internal/logger"
 )
 
 // Service manages Solana connectivity and provides a clean interface
 // for HTTP client access with health monitoring and lifecycle management
 type Service struct {
 	config        *Config
+	logger        *logger.Logger
 	httpClient    *HTTPClient
 	healthTracker *HealthTracker
 	mu            sync.RWMutex
@@ -23,14 +27,28 @@ func NewService(config *Config) (*Service, error) {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
 
+	// Initialize logger for service
+	serviceLogger := logger.NewFromEnv().WithComponent("solana-service")
+
 	// Validate configuration
 	if err := config.Validate(); err != nil {
+		serviceLogger.LogHandlerError(context.Background(), "service_initialization", err,
+			slog.String("error_type", "validation"),
+			slog.String("config_url", config.HttpURL))
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	// Log service initialization
+	serviceLogger.InfoContext(context.Background(), "Initializing Solana service",
+		slog.String("rpc_url", config.HttpURL),
+		slog.Duration("timeout", config.RequestTimeout),
+		slog.Int("max_retries", config.MaxRetries))
+
 	// Create HTTP client
-	httpClient, err := NewHTTPClient(config)
+	httpClient, err := NewHTTPClient(config, serviceLogger)
 	if err != nil {
+		serviceLogger.LogHandlerError(context.Background(), "service_initialization", err,
+			slog.String("error_type", "http_client_creation"))
 		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
 	}
 
@@ -39,6 +57,7 @@ func NewService(config *Config) (*Service, error) {
 
 	service := &Service{
 		config:        config,
+		logger:        serviceLogger,
 		httpClient:    httpClient,
 		healthTracker: healthTracker,
 	}
@@ -46,6 +65,7 @@ func NewService(config *Config) (*Service, error) {
 	// Perform initial health check to populate baseline
 	go service.performInitialHealthCheck()
 
+	serviceLogger.InfoContext(context.Background(), "Solana service initialized successfully")
 	return service, nil
 }
 
@@ -90,6 +110,8 @@ func (s *Service) performHealthCheck(ctx context.Context) error {
 
 	if client == nil {
 		err := fmt.Errorf("HTTP client not available")
+		s.logger.LogHandlerError(ctx, "health_check", err,
+			slog.String("error_type", "client_unavailable"))
 		s.healthTracker.RecordError(err)
 		return err
 	}
@@ -100,8 +122,21 @@ func (s *Service) performHealthCheck(ctx context.Context) error {
 	responseTime := time.Since(startTime)
 
 	if err != nil {
+		s.logger.LogExternalAPIError(ctx, "solana-rpc", "health", err, 0,
+			slog.Duration("response_time", responseTime))
 		s.healthTracker.RecordError(err)
 		return err
+	}
+
+	// Log successful health check
+	if responseTime > 5*time.Second {
+		// Warn on slow health checks
+		s.logger.WarnContext(ctx, "Slow Solana health check",
+			slog.Duration("response_time", responseTime),
+			slog.String("operation", "health_check"))
+	} else {
+		s.logger.DebugContext(ctx, "Solana health check successful",
+			slog.Duration("response_time", responseTime))
 	}
 
 	s.healthTracker.RecordSuccess(responseTime)
@@ -113,8 +148,16 @@ func (s *Service) performInitialHealthCheck() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	s.logger.InfoContext(ctx, "Starting initial Solana health check")
+
 	// Don't fail service creation if initial health check fails
-	_ = s.performHealthCheck(ctx)
+	err := s.performHealthCheck(ctx)
+	if err != nil {
+		s.logger.WarnContext(ctx, "Initial Solana health check failed, service still available",
+			slog.String("error", err.Error()))
+	} else {
+		s.logger.InfoContext(ctx, "Initial Solana health check completed successfully")
+	}
 }
 
 // Close gracefully shuts down the service
@@ -126,15 +169,19 @@ func (s *Service) Close() error {
 		return nil // Already closed
 	}
 
+	s.logger.InfoContext(context.Background(), "Closing Solana service")
 	s.closed = true
 
 	// Close HTTP client
 	if s.httpClient != nil {
 		if err := s.httpClient.Close(); err != nil {
+			s.logger.LogHandlerError(context.Background(), "service_close", err,
+				slog.String("error_type", "http_client_close"))
 			return fmt.Errorf("failed to close HTTP client: %w", err)
 		}
 	}
 
+	s.logger.InfoContext(context.Background(), "Solana service closed successfully")
 	return nil
 }
 

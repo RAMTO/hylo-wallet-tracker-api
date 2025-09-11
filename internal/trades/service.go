@@ -3,11 +3,13 @@ package trades
 import (
 	"context"
 	"fmt"
-	"sort"
-
 	"hylo-wallet-tracker-api/internal/hylo"
+	"hylo-wallet-tracker-api/internal/logger"
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
+	"log/slog"
+	"sort"
+	"time"
 )
 
 // HTTPClientInterface defines the contract for Solana HTTP client interaction
@@ -30,6 +32,9 @@ type TradeService struct {
 	// hyloConfig provides Hylo program configuration
 	hyloConfig *hylo.Config
 
+	// logger for structured logging
+	logger *logger.Logger
+
 	// options provides service configuration options
 	options *TradeServiceOptions
 }
@@ -50,27 +55,48 @@ func NewTradeService(httpClient HTTPClientInterface, tokenConfig *tokens.Config,
 		return nil, fmt.Errorf("hyloConfig cannot be nil")
 	}
 
+	// Initialize logger for service
+	serviceLogger := logger.NewFromEnv().WithComponent("trade-service")
+
 	// Validate configurations
 	if err := tokenConfig.Validate(); err != nil {
+		serviceLogger.LogHandlerError(context.Background(), "service_initialization", err,
+			slog.String("error_type", "token_config_validation"))
 		return nil, fmt.Errorf("invalid token config: %w", err)
 	}
 	if err := hyloConfig.Validate(); err != nil {
+		serviceLogger.LogHandlerError(context.Background(), "service_initialization", err,
+			slog.String("error_type", "hylo_config_validation"))
 		return nil, fmt.Errorf("invalid hylo config: %w", err)
 	}
 
-	return &TradeService{
+	serviceLogger.InfoContext(context.Background(), "Initializing Trade service")
+
+	service := &TradeService{
 		httpClient:  httpClient,
 		tokenConfig: tokenConfig,
 		hyloConfig:  hyloConfig,
+		logger:      serviceLogger,
 		options:     DefaultTradeServiceOptions(),
-	}, nil
+	}
+
+	serviceLogger.InfoContext(context.Background(), "Trade service initialized successfully")
+	return service, nil
 }
 
 // GetWalletTrades fetches xSOL trade history for a wallet using real-time RPC calls
 // Returns paginated trade results with cursor-based navigation
 func (s *TradeService) GetWalletTrades(ctx context.Context, walletAddr solana.Address, limit int, before string) (*TradeResponse, error) {
+	startTime := time.Now()
+
+	s.logger.InfoContext(ctx, "Getting wallet trades",
+		slog.String("wallet", walletAddr.String()),
+		slog.Int("limit", limit),
+		slog.String("before", before))
+
 	// Validate wallet address
 	if err := walletAddr.Validate(); err != nil {
+		s.logger.LogValidationError(ctx, "get_wallet_trades", "wallet", walletAddr, err)
 		return nil, fmt.Errorf("%w: %v", ErrInvalidWalletAddress, err)
 	}
 
@@ -82,24 +108,39 @@ func (s *TradeService) GetWalletTrades(ctx context.Context, walletAddr solana.Ad
 	}
 
 	if err := ValidateTradeRequest(req, s.options); err != nil {
+		s.logger.LogValidationError(ctx, "get_wallet_trades", "request", req, err)
 		return nil, err
 	}
 
 	// Step 1: Derive xSOL Associated Token Account for this wallet
 	xsolATA, err := tokens.DeriveAssociatedTokenAddress(walletAddr, tokens.XSOLMint)
 	if err != nil {
+		s.logger.LogHandlerError(ctx, "get_wallet_trades", err,
+			slog.String("error_type", "ata_derivation"),
+			slog.String("wallet", walletAddr.String()))
 		return nil, fmt.Errorf("%w: %v", ErrXSOLATADerivation, err)
 	}
+
+	s.logger.DebugContext(ctx, "Derived xSOL ATA address",
+		slog.String("ata_address", xsolATA.String()))
 
 	// Step 2: Fetch transaction signatures for the xSOL ATA
 	signatures, err := s.httpClient.GetSignaturesForAddress(ctx, xsolATA, before, req.Limit*2) // Fetch extra to account for filtering
 	if err != nil {
+		s.logger.LogExternalAPIError(ctx, "solana-rpc", "GetSignaturesForAddress", err, 0,
+			slog.String("ata_address", xsolATA.String()))
 		return nil, fmt.Errorf("%w: %v", ErrSignatureFetch, err)
 	}
+
+	s.logger.InfoContext(ctx, "Fetched signatures for xSOL ATA",
+		slog.Int("signature_count", len(signatures)),
+		slog.String("ata_address", xsolATA.String()))
 
 	// Step 3: Process signatures to extract xSOL trades
 	trades, err := s.processSignatures(ctx, signatures, xsolATA, req.Limit)
 	if err != nil {
+		s.logger.LogHandlerError(ctx, "get_wallet_trades", err,
+			slog.String("error_type", "signature_processing"))
 		return nil, err
 	}
 
@@ -110,6 +151,13 @@ func (s *TradeService) GetWalletTrades(ctx context.Context, walletAddr solana.Ad
 		// Use the last trade's signature as the next cursor
 		nextCursor = trades[len(trades)-1].Signature
 	}
+
+	// Log operation completion
+	s.logger.InfoContext(ctx, "Wallet trades retrieval completed",
+		slog.String("wallet", walletAddr.String()),
+		slog.Int("trades_found", len(trades)),
+		slog.Bool("has_more", hasMore),
+		slog.Duration("elapsed", time.Since(startTime)))
 
 	return NewTradeResponse(walletAddr.String(), trades, hasMore, nextCursor, req.Limit), nil
 }

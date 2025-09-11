@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"hylo-wallet-tracker-api/internal/logger"
 )
 
 // DexScreenerClient handles interactions with the DexScreener API for SOL price data
@@ -20,6 +23,9 @@ type DexScreenerClient struct {
 
 	// config holds the client configuration
 	config *PriceConfig
+
+	// logger for structured logging
+	logger *logger.Logger
 
 	// baseURL is the DexScreener API base URL
 	baseURL string
@@ -47,11 +53,21 @@ func NewDexScreenerClient(config *PriceConfig) *DexScreenerClient {
 		config = DefaultConfig()
 	}
 
+	// Initialize logger for service
+	serviceLogger := logger.NewFromEnv().WithComponent("dexscreener-client")
+
+	serviceLogger.InfoContext(context.Background(), "Initializing DexScreener client",
+		slog.Duration("timeout", config.DexScreenerTimeout),
+		slog.Int("rate_limit", config.RequestsPerMinute),
+		slog.Duration("rate_window", config.RateLimitWindow),
+		slog.String("base_url", config.DexScreenerURL))
+
 	client := &DexScreenerClient{
 		httpClient: &http.Client{
 			Timeout: config.DexScreenerTimeout,
 		},
 		config:  config,
+		logger:  serviceLogger,
 		baseURL: strings.TrimSuffix(config.DexScreenerURL, "/"),
 		rateLimiter: &rateLimiter{
 			tokens:     config.RequestsPerMinute,
@@ -60,6 +76,7 @@ func NewDexScreenerClient(config *PriceConfig) *DexScreenerClient {
 		},
 	}
 
+	serviceLogger.InfoContext(context.Background(), "DexScreener client initialized successfully")
 	return client
 }
 
@@ -67,18 +84,29 @@ func NewDexScreenerClient(config *PriceConfig) *DexScreenerClient {
 // Returns the best price based on liquidity and trading volume
 func (c *DexScreenerClient) FetchSOLPrice(ctx context.Context) (*SOLUSDPrice, error) {
 	const op = "FetchSOLPrice"
+	startTime := time.Now()
+
+	c.logger.InfoContext(ctx, "Fetching SOL/USD price from DexScreener")
 
 	// Apply rate limiting
 	if err := c.waitForRateLimit(ctx); err != nil {
+		c.logger.LogExternalAPIError(ctx, "dexscreener", "rate_limit", err, 0,
+			slog.Duration("elapsed", time.Since(startTime)))
 		return nil, NewPriceError(op, err).WithSource("rate_limit").WithRetryable(false)
 	}
 
 	// Build the request URL for SOL pairs
 	requestURL := fmt.Sprintf("%s/latest/dex/tokens/So11111111111111111111111111111111111111112", c.baseURL)
 
+	c.logger.DebugContext(ctx, "Making DexScreener API request",
+		slog.String("url", requestURL))
+
 	// Fetch data with retries
 	response, err := c.fetchWithRetry(ctx, requestURL)
 	if err != nil {
+		c.logger.LogExternalAPIError(ctx, "dexscreener", "api_request", err, 0,
+			slog.Duration("total_elapsed", time.Since(startTime)))
+
 		// If this is already a PriceError, preserve it; otherwise wrap it
 		var priceErr *PriceError
 		if errors.As(err, &priceErr) {
@@ -90,16 +118,27 @@ func (c *DexScreenerClient) FetchSOLPrice(ctx context.Context) (*SOLUSDPrice, er
 	// Parse the response
 	solPrice, err := c.parseSOLPriceResponse(response)
 	if err != nil {
+		c.logger.LogParsingError(ctx, op, "sol_price_response", err,
+			slog.Duration("elapsed", time.Since(startTime)))
 		return nil, NewPriceError(op, err).WithSource("parsing")
 	}
 
 	// Validate the price
 	if !c.config.IsValidSOLPrice(solPrice.Price) {
-		return nil, NewValidationError(op,
-			fmt.Sprintf("price %f outside valid range [%f, %f]",
-				solPrice.Price, c.config.SOLUSDMinPrice, c.config.SOLUSDMaxPrice),
-			solPrice.Price)
+		validationErr := fmt.Sprintf("price %f outside valid range [%f, %f]",
+			solPrice.Price, c.config.SOLUSDMinPrice, c.config.SOLUSDMaxPrice)
+
+		c.logger.LogValidationError(ctx, op, "price", solPrice.Price, fmt.Errorf(validationErr))
+
+		return nil, NewValidationError(op, validationErr, solPrice.Price)
 	}
+
+	// Log successful price fetch
+	c.logger.InfoContext(ctx, "SOL/USD price fetched successfully",
+		slog.Float64("price", solPrice.Price),
+		slog.String("source", solPrice.Source),
+		slog.String("pair", solPrice.Pair),
+		slog.Duration("elapsed", time.Since(startTime)))
 
 	return solPrice, nil
 }
