@@ -280,6 +280,8 @@ func detectTokenAssetType(mintAddress string) string {
 		return "xSOL"
 	case tokens.USDCMint:
 		return "USDC"
+	case tokens.JitoSOLMint:
+		return "jitoSOL"
 	default:
 		// Unknown token - could be wrapped SOL or other SPL tokens
 		// For now, we'll treat unknown tokens as generic tokens

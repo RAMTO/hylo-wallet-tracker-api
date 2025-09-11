@@ -68,6 +68,8 @@ func (t *XSOLTrade) SetTradeDetails(side string, xsolAmount, counterAmount uint6
 		t.CounterAmount = formatAmount(counterAmount, tokens.HyUSDDecimals)
 	case "USDC":
 		t.CounterAmount = formatAmount(counterAmount, tokens.USDCDecimals)
+	case "jitoSOL":
+		t.CounterAmount = formatAmount(counterAmount, tokens.JitoSOLDecimals)
 	default:
 		t.CounterAmount = fmt.Sprintf("%d", counterAmount) // Raw amount as fallback
 	}
@@ -113,5 +115,5 @@ func (t *XSOLTrade) IsValidTrade() bool {
 	return t.Signature != "" &&
 		(t.Side == TradeSideBuy || t.Side == TradeSideSell) &&
 		t.XSOLAmountRaw > 0 &&
-		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD" || t.CounterAsset == "USDC")
+		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD" || t.CounterAsset == "USDC" || t.CounterAsset == "jitoSOL")
 }

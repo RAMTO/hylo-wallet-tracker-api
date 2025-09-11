@@ -23,6 +23,9 @@ type Config struct {
 	// USDCMint can be overridden via USDC_MINT environment variable
 	USDCMint solana.Address
 
+	// JitoSOLMint can be overridden via JITOSOL_MINT environment variable
+	JitoSOLMint solana.Address
+
 	// tokenRegistry is an internal map for fast token lookups
 	tokenRegistry map[solana.Address]*TokenInfo
 }
@@ -32,10 +35,11 @@ type Config struct {
 func NewConfig() *Config {
 	config := &Config{
 		// Default to mainnet addresses from constants
-		HyUSDMint:  HyUSDMint,
-		SHyUSDMint: SHyUSDMint,
-		XSOLMint:   XSOLMint,
-		USDCMint:   USDCMint,
+		HyUSDMint:   HyUSDMint,
+		SHyUSDMint:  SHyUSDMint,
+		XSOLMint:    XSOLMint,
+		USDCMint:    USDCMint,
+		JitoSOLMint: JitoSOLMint,
 	}
 
 	// Load configuration from environment variables
@@ -68,6 +72,11 @@ func (c *Config) loadFromEnvironment() {
 	// Load USDC mint address if provided
 	if usdcMint := os.Getenv("USDC_MINT"); usdcMint != "" {
 		c.USDCMint = solana.Address(strings.TrimSpace(usdcMint))
+	}
+
+	// Load jitoSOL mint address if provided
+	if jitosolMint := os.Getenv("JITOSOL_MINT"); jitosolMint != "" {
+		c.JitoSOLMint = solana.Address(strings.TrimSpace(jitosolMint))
 	}
 }
 
@@ -106,6 +115,14 @@ func (c *Config) buildTokenRegistry() {
 		Name:     USDCName,
 		Decimals: USDCDecimals,
 	}
+
+	// jitoSOL token info
+	c.tokenRegistry[c.JitoSOLMint] = &TokenInfo{
+		Mint:     c.JitoSOLMint,
+		Symbol:   JitoSOLSymbol,
+		Name:     JitoSOLName,
+		Decimals: JitoSOLDecimals,
+	}
 }
 
 // Validate checks if the token configuration is valid
@@ -127,8 +144,12 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid USDC mint address: %w", err)
 	}
 
+	if err := c.JitoSOLMint.Validate(); err != nil {
+		return fmt.Errorf("invalid jitoSOL mint address: %w", err)
+	}
+
 	// Ensure no duplicate mint addresses
-	mints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint}
+	mints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint, c.JitoSOLMint}
 	for i, mint1 := range mints {
 		for j, mint2 := range mints {
 			if i != j && mint1 == mint2 {
@@ -162,8 +183,8 @@ func (c *Config) GetTokenInfo(mint solana.Address) *TokenInfo {
 func (c *Config) GetSupportedTokens() []*TokenInfo {
 	tokens := make([]*TokenInfo, 0, len(c.tokenRegistry))
 
-	// Return in a predictable order: hyUSD, sHYUSD, xSOL, USDC
-	orderedMints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint}
+	// Return in a predictable order: hyUSD, sHYUSD, xSOL, USDC, jitoSOL
+	orderedMints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint, c.JitoSOLMint}
 
 	for _, mint := range orderedMints {
 		if tokenInfo, exists := c.tokenRegistry[mint]; exists {
@@ -195,8 +216,8 @@ func (c *Config) GetTokenBySymbol(symbol string) *TokenInfo {
 func (c *Config) GetSupportedMints() []solana.Address {
 	mints := make([]solana.Address, 0, len(c.tokenRegistry))
 
-	// Return in a predictable order: hyUSD, sHYUSD, xSOL, USDC
-	orderedMints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint}
+	// Return in a predictable order: hyUSD, sHYUSD, xSOL, USDC, jitoSOL
+	orderedMints := []solana.Address{c.HyUSDMint, c.SHyUSDMint, c.XSOLMint, c.USDCMint, c.JitoSOLMint}
 
 	for _, mint := range orderedMints {
 		if _, exists := c.tokenRegistry[mint]; exists {
