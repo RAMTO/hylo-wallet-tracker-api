@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"hylo-wallet-tracker-api/internal/hylo"
+	"hylo-wallet-tracker-api/internal/logger"
 	"hylo-wallet-tracker-api/internal/price"
 	"hylo-wallet-tracker-api/internal/solana"
 	"hylo-wallet-tracker-api/internal/tokens"
@@ -19,6 +20,7 @@ import (
 
 type Server struct {
 	port          int
+	logger        *logger.Logger
 	solanaService *solana.Service
 	tokenService  *tokens.TokenService
 	tradeService  *trades.TradeService
@@ -72,8 +74,13 @@ func NewServer() *http.Server {
 
 	fmt.Println("✅ Price service created successfully")
 
+	// Bootstrap Logger from environment
+	appLogger := logger.NewFromEnv()
+	fmt.Println("✅ Logger service created successfully")
+
 	newServer := &Server{
 		port:          port,
+		logger:        appLogger,
 		solanaService: solanaService,
 		tokenService:  tokenService,
 		tradeService:  tradeService,

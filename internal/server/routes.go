@@ -8,7 +8,8 @@ import (
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger"
 
-	_ "hylo-wallet-tracker-api/docs/api"        // This line is important for swagger to work
+	_ "hylo-wallet-tracker-api/docs/api" // This line is important for swagger to work
+	"hylo-wallet-tracker-api/internal/logger"
 	_ "hylo-wallet-tracker-api/internal/tokens" // Required for swagger type generation
 	_ "hylo-wallet-tracker-api/internal/trades" // Required for swagger type generation
 )
@@ -18,11 +19,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware configuration
+	r.Use(logger.RequestIDMiddleware) // Add request ID to all requests
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))

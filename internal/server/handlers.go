@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -56,6 +57,7 @@ func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
 	// Extract wallet address from URL path
 	addressStr := chi.URLParam(r, "address")
 	if addressStr == "" {
+		s.logger.LogValidationError(r.Context(), "get_wallet_balances", "address", "", fmt.Errorf("address parameter missing from URL path"))
 		s.writeValidationError(w, "Wallet address is required", "Address parameter missing from URL path")
 		return
 	}
@@ -63,6 +65,7 @@ func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate wallet address
 	wallet := solana.Address(addressStr)
 	if err := wallet.Validate(); err != nil {
+		s.logger.LogValidationError(r.Context(), "get_wallet_balances", "address", addressStr, err)
 		s.writeValidationError(w, "Invalid wallet address format", err.Error())
 		return
 	}
@@ -71,12 +74,18 @@ func (s *Server) handleWalletBalances(w http.ResponseWriter, r *http.Request) {
 	// This implements strict error handling - all tokens must succeed
 	balances, err := s.tokenService.GetWalletBalances(r.Context(), wallet)
 	if err != nil {
+		// Log error with wallet context
+		logger := s.logger.WithWalletAddress(string(wallet))
+
 		// Categorize the error appropriately for better error handling
 		if isNetworkError(err) {
+			logger.LogExternalAPIError(r.Context(), "token-service", "GetWalletBalances", err, 0)
 			s.writeNetworkError(w, err.Error())
 		} else if isValidationError(err) {
+			logger.LogValidationError(r.Context(), "get_wallet_balances", "wallet_data", wallet, err)
 			s.writeValidationError(w, "Failed to fetch wallet balances", err.Error())
 		} else {
+			logger.LogHandlerError(r.Context(), "get_wallet_balances", err)
 			s.writeInternalError(w, err.Error())
 		}
 		return
@@ -103,6 +112,7 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 	// Extract wallet address from URL path
 	addressStr := chi.URLParam(r, "address")
 	if addressStr == "" {
+		s.logger.LogValidationError(r.Context(), "get_wallet_trades", "address", "", fmt.Errorf("address parameter missing from URL path"))
 		s.writeValidationError(w, "Wallet address is required", "Address parameter missing from URL path")
 		return
 	}
@@ -110,6 +120,7 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate wallet address
 	wallet := solana.Address(addressStr)
 	if err := wallet.Validate(); err != nil {
+		s.logger.LogValidationError(r.Context(), "get_wallet_trades", "address", addressStr, err)
 		s.writeValidationError(w, "Invalid wallet address format", err.Error())
 		return
 	}
@@ -120,6 +131,7 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
 			limit = parsedLimit
 		} else {
+			s.logger.LogParsingError(r.Context(), "get_wallet_trades", "limit_parameter", err, slog.String("invalid_value", limitStr))
 			s.writeValidationError(w, "Invalid limit parameter", "Limit must be a valid integer")
 			return
 		}
@@ -127,6 +139,7 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 
 	// Validate limit range
 	if limit < 1 || limit > 50 {
+		s.logger.LogValidationError(r.Context(), "get_wallet_trades", "limit", limit, fmt.Errorf("limit must be between 1 and 50"))
 		s.writeValidationError(w, "Invalid limit parameter", "Limit must be between 1 and 50")
 		return
 	}
@@ -137,12 +150,18 @@ func (s *Server) handleWalletTrades(w http.ResponseWriter, r *http.Request) {
 	// Fetch wallet trades using trade service
 	trades, err := s.tradeService.GetWalletTrades(r.Context(), wallet, limit, before)
 	if err != nil {
+		// Log error with wallet context
+		logger := s.logger.WithWalletAddress(string(wallet))
+
 		// Categorize the error appropriately for better error handling
 		if isNetworkError(err) {
+			logger.LogExternalAPIError(r.Context(), "trade-service", "GetWalletTrades", err, 0)
 			s.writeNetworkError(w, err.Error())
 		} else if isValidationError(err) {
+			logger.LogValidationError(r.Context(), "get_wallet_trades", "wallet_data", wallet, err)
 			s.writeValidationError(w, "Failed to fetch wallet trades", err.Error())
 		} else {
+			logger.LogHandlerError(r.Context(), "get_wallet_trades", err)
 			s.writeInternalError(w, err.Error())
 		}
 		return
@@ -165,10 +184,15 @@ func (s *Server) handlePrice(w http.ResponseWriter, r *http.Request) {
 	// Always fetch fresh prices - no caching for maximum freshness
 	prices, err := s.priceService.GetCombinedPriceResponse(r.Context())
 	if err != nil {
+		// Log error
+		logger := s.logger.WithOperation("get_price")
+
 		// Return error - no fallback cache to rely on
 		if isNetworkError(err) {
+			logger.LogExternalAPIError(r.Context(), "price-service", "GetCombinedPriceResponse", err, 0)
 			s.writeNetworkError(w, err.Error())
 		} else {
+			logger.LogHandlerError(r.Context(), "get_price", err)
 			s.writeInternalError(w, err.Error())
 		}
 		return
@@ -184,6 +208,7 @@ func (s *Server) handlePriceDebug(w http.ResponseWriter, r *http.Request) {
 	// Get calculation details
 	details, err := s.priceService.GetPriceCalculationDetails(r.Context())
 	if err != nil {
+		s.logger.LogHandlerError(r.Context(), "get_price_debug", err)
 		s.writeInternalError(w, fmt.Sprintf("Failed to get calculation details: %v", err))
 		return
 	}

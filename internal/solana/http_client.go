@@ -7,32 +7,43 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"hylo-wallet-tracker-api/internal/logger"
 )
 
 // HTTPClient provides HTTP-based Solana RPC functionality
 type HTTPClient struct {
 	config     *Config
+	logger     *logger.Logger
 	httpClient *http.Client
 	rpcID      int
 }
 
 // NewHTTPClient creates a new HTTP client for Solana RPC
-func NewHTTPClient(config *Config) (*HTTPClient, error) {
+func NewHTTPClient(config *Config, serviceLogger *logger.Logger) (*HTTPClient, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
+	clientLogger := serviceLogger.WithComponent("solana-http-client")
+
 	client := &HTTPClient{
 		config: config,
+		logger: clientLogger,
 		httpClient: &http.Client{
 			Timeout: config.RequestTimeout,
 		},
 		rpcID: 1,
 	}
+
+	clientLogger.InfoContext(context.Background(), "Solana HTTP client created",
+		slog.String("rpc_url", config.HttpURL),
+		slog.Duration("timeout", config.RequestTimeout))
 
 	return client, nil
 }
@@ -153,12 +164,27 @@ func (c *HTTPClient) GetSignaturesForAddress(ctx context.Context, address Addres
 
 // request performs a JSON-RPC request with retry logic
 func (c *HTTPClient) request(ctx context.Context, method string, params interface{}, result interface{}) error {
+	startTime := time.Now()
 	var lastErr error
+
+	// Log request start
+	c.logger.DebugContext(ctx, "Starting Solana RPC request",
+		slog.String("method", method),
+		slog.Int("max_retries", c.config.MaxRetries))
 
 	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
 		// Calculate backoff delay (exponential with jitter)
 		if attempt > 0 {
 			delay := c.calculateBackoff(attempt - 1)
+
+			// Log retry attempt
+			c.logger.WarnContext(ctx, "Retrying Solana RPC request",
+				slog.String("method", method),
+				slog.Int("attempt", attempt+1),
+				slog.Int("max_retries", c.config.MaxRetries+1),
+				slog.Duration("backoff_delay", delay),
+				slog.String("previous_error", lastErr.Error()))
+
 			select {
 			case <-time.After(delay):
 			case <-ctx.Done():
@@ -168,6 +194,21 @@ func (c *HTTPClient) request(ctx context.Context, method string, params interfac
 
 		err := c.doRequest(ctx, method, params, result)
 		if err == nil {
+			totalTime := time.Since(startTime)
+
+			// Log successful request
+			if totalTime > 3*time.Second {
+				c.logger.WarnContext(ctx, "Slow Solana RPC request completed",
+					slog.String("method", method),
+					slog.Duration("total_time", totalTime),
+					slog.Int("attempts", attempt+1))
+			} else {
+				c.logger.DebugContext(ctx, "Solana RPC request completed",
+					slog.String("method", method),
+					slog.Duration("total_time", totalTime),
+					slog.Int("attempts", attempt+1))
+			}
+
 			return nil // Success
 		}
 
@@ -175,6 +216,10 @@ func (c *HTTPClient) request(ctx context.Context, method string, params interfac
 
 		// Don't retry on validation errors or non-retryable errors
 		if !IsRetryable(err) {
+			c.logger.LogExternalAPIError(ctx, "solana-rpc", method, err, 0,
+				slog.Duration("total_time", time.Since(startTime)),
+				slog.Int("attempts", attempt+1),
+				slog.String("error_type", "non_retryable"))
 			return err
 		}
 
@@ -184,7 +229,13 @@ func (c *HTTPClient) request(ctx context.Context, method string, params interfac
 		}
 	}
 
-	return WrapNetworkError(lastErr, c.config.MaxRetries+1, true)
+	finalError := WrapNetworkError(lastErr, c.config.MaxRetries+1, true)
+	c.logger.LogExternalAPIError(ctx, "solana-rpc", method, finalError, 0,
+		slog.Duration("total_time", time.Since(startTime)),
+		slog.Int("total_attempts", c.config.MaxRetries+1),
+		slog.String("error_type", "max_retries_exceeded"))
+
+	return finalError
 }
 
 // doRequest performs a single JSON-RPC request without retry
@@ -290,6 +341,7 @@ func (c *HTTPClient) calculateBackoff(attempt int) time.Duration {
 
 // Close closes the HTTP client
 func (c *HTTPClient) Close() error {
+	c.logger.InfoContext(context.Background(), "Closing Solana HTTP client")
 	// HTTP client doesn't need explicit closing, but this provides
 	// a consistent interface with WebSocket client
 	return nil
@@ -298,11 +350,18 @@ func (c *HTTPClient) Close() error {
 // Health returns the health status of the HTTP client
 func (c *HTTPClient) Health(ctx context.Context) error {
 	// Simple health check by making a basic RPC call
+	c.logger.DebugContext(ctx, "Performing Solana HTTP client health check")
+
 	_, err := c.GetAccount(ctx, Address("A3wpCHTBFHQr7JeGFSA6cbTHJ4rkXgHZ2BLj2rZDyc6g"), CommitmentFinalized)
 
 	// Account not found is expected for the null address, so it's healthy
 	if errors.Is(err, ErrAccountNotFound) {
+		c.logger.DebugContext(ctx, "Solana HTTP client health check passed (account not found as expected)")
 		return nil
+	}
+
+	if err != nil {
+		c.logger.LogExternalAPIError(ctx, "solana-rpc", "health-check", err, 0)
 	}
 
 	return err
