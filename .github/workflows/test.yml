@@ -1,0 +1,198 @@
+name: 🧪 API Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/test.yml"
+  push:
+    branches: [main]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/test.yml"
+
+# Cancel in-progress runs for the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =====================================================
+  # Unit Tests Job
+  # =====================================================
+  unit-tests:
+    name: 🔬 Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.0"
+          cache-dependency-path: go.sum
+
+      - name: 📦 Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: 🔍 Verify Dependencies
+        run: |
+          go mod verify
+
+      - name: 🧪 Run Unit Tests
+        env:
+          # Test environment variables (safe defaults)
+          APP_ENV: test
+          PORT: 8080
+          RPC_HTTP_URL: https://api.mainnet-beta.solana.com
+          RPC_WS_URL: wss://api.mainnet-beta.solana.com
+          SOLANA_RPC_TIMEOUT_SEC: 30
+          SOLANA_WS_HEARTBEAT_SEC: 30
+        run: |
+          echo "🏃‍♂️ Running unit tests with coverage..."
+          go test ./... -v -cover -coverprofile=coverage.out -covermode=atomic
+
+      - name: 📊 Generate Coverage Report
+        run: |
+          go tool cover -html=coverage.out -o=coverage.html
+          go tool cover -func=coverage.out
+
+      - name: 📈 Coverage Summary
+        run: |
+          echo "## 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          go tool cover -func=coverage.out | tail -1 >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🎯 Enforce Coverage Threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Current coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage ${COVERAGE}% is below 80% threshold"
+            exit 1
+          else
+            echo "✅ Coverage ${COVERAGE}% meets the 80% threshold"
+          fi
+
+      - name: 📎 Upload Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
+
+  # =====================================================
+  # Code Quality Checks
+  # =====================================================
+  code-quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: unit-tests
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.0"
+          cache-dependency-path: go.sum
+
+      - name: 📦 Restore Go Module Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: 🔍 Go Vet
+        run: |
+          echo "🔍 Running go vet..."
+          go vet ./...
+
+      - name: 🧹 Go Fmt Check
+        run: |
+          echo "🧹 Checking go fmt..."
+          unformatted=$(go fmt ./...)
+          if [ -n "$unformatted" ]; then
+            echo "❌ The following files need formatting:"
+            echo "$unformatted"
+            exit 1
+          fi
+          echo "✅ All files are properly formatted"
+
+      - name: 🔧 Go Mod Tidy Check
+        run: |
+          echo "🔧 Checking go mod tidy..."
+          go mod tidy
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "❌ go mod tidy made changes"
+            exit 1
+          fi
+          echo "✅ go.mod and go.sum are tidy"
+
+  # =====================================================
+  # Test Summary Job
+  # =====================================================
+  test-summary:
+    name: 📋 Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, code-quality]
+    if: always()
+
+    steps:
+      - name: 📊 Test Results Summary
+        run: |
+          echo "## 🧪 API Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.unit-tests.result }}" == "success" ]; then
+            echo "✅ **Unit Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Unit Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.code-quality.result }}" == "success" ]; then
+            echo "✅ **Code Quality**: PASSED" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.code-quality.result }}" == "skipped" ]; then
+            echo "⏭️ **Code Quality**: SKIPPED (unit tests failed)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Code Quality**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow**: ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ Fail if Tests Failed
+        if: needs.unit-tests.result != 'success' || needs.code-quality.result != 'success'
+        run: |
+          echo "One or more test jobs failed"
+          exit 1
