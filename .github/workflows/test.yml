@@ -1,4 +1,4 @@
-name: 🧪 API Tests
+name: 🚀 API CI Pipeline
 
 on:
   pull_request:
@@ -25,12 +25,58 @@ concurrency:
 
 jobs:
   # =====================================================
+  # Build Job
+  # =====================================================
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.0"
+          cache-dependency-path: go.sum
+
+      - name: 📦 Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: 🔍 Verify Dependencies
+        run: |
+          go mod verify
+
+      - name: 🏗️ Build Application
+        run: |
+          echo "🏗️ Building Go application..."
+          go build -v -o ./bin/api ./cmd/api/main.go
+          echo "✅ Build completed successfully"
+
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-binary
+          path: ./bin/api
+          retention-days: 7
+
+  # =====================================================
   # Unit Tests Job
   # =====================================================
   unit-tests:
     name: 🔬 Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: build
 
     steps:
       - name: 📥 Checkout Code
@@ -98,7 +144,7 @@ jobs:
     name: 🔍 Code Quality
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: unit-tests
+    needs: build
 
     steps:
       - name: 📥 Checkout Code
@@ -152,17 +198,25 @@ jobs:
   test-summary:
     name: 📋 Test Summary
     runs-on: ubuntu-latest
-    needs: [unit-tests, code-quality]
+    needs: [build, unit-tests, code-quality]
     if: always()
 
     steps:
       - name: 📊 Test Results Summary
         run: |
-          echo "## 🧪 API Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 API Pipeline Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "✅ **Build**: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build**: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
 
           if [ "${{ needs.unit-tests.result }}" == "success" ]; then
             echo "✅ **Unit Tests**: PASSED" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.unit-tests.result }}" == "skipped" ]; then
+            echo "⏭️ **Unit Tests**: SKIPPED (build failed)" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Unit Tests**: FAILED" >> $GITHUB_STEP_SUMMARY
           fi
@@ -170,7 +224,7 @@ jobs:
           if [ "${{ needs.code-quality.result }}" == "success" ]; then
             echo "✅ **Code Quality**: PASSED" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ needs.code-quality.result }}" == "skipped" ]; then
-            echo "⏭️ **Code Quality**: SKIPPED (unit tests failed)" >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ **Code Quality**: SKIPPED (build failed)" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Code Quality**: FAILED" >> $GITHUB_STEP_SUMMARY
           fi
@@ -180,8 +234,8 @@ jobs:
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: ❌ Fail if Tests Failed
-        if: needs.unit-tests.result != 'success' || needs.code-quality.result != 'success'
+      - name: ❌ Fail if Pipeline Failed
+        if: needs.build.result != 'success' || needs.unit-tests.result != 'success' || needs.code-quality.result != 'success'
         run: |
-          echo "One or more test jobs failed"
+          echo "One or more pipeline jobs failed"
           exit 1
