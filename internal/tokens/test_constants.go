@@ -23,4 +23,20 @@ const (
 
 	// TestMintAddress is used for mock SPL token account mint in parser tests
 	TestMintAddress = "TestMint1111111111111111111111111111111"
+
+	// Test mint addresses for environment variable override testing
+	TestHyUSDMintOverride   = "TestHyUSDMintAddress1234567890123456789012"
+	TestSHyUSDMintOverride  = "TestSHyUSDMintAddress123456789012345678901"
+	TestXSOLMintOverride    = "TestXSOLMintAddress1234567890123456789012"
+	TestUSDCMintOverride    = "TestUSDCMintAddress1234567890123456789012"
+	TestJitoSOLMintOverride = "TestJitoSOLMintAddress12345678901234567890"
+
+	// Test mint address for whitespace trimming test
+	TestMintWithSpaces = "  TestHyUSDMintAddress1234567890123456789012  "
+	TestMintTrimmed    = "TestHyUSDMintAddress1234567890123456789012"
+
+	// Invalid mint addresses for error testing
+	TestInvalidMint       = "InvalidMint123456789012345678901234567890"
+	TestTooShortMint      = "toolong"
+	TestDuplicateTestMint = "DuplicateTestMint1234567890123456789012"
 )

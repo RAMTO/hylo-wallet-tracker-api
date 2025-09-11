@@ -20,23 +20,30 @@ const (
 
 	// TokenDecimals defines the decimal precision for each token
 	// Based on Solana SPL token standards and Hylo protocol specifications
-	HyUSDDecimals  = 6 // Standard stablecoin precision (6 decimals)
-	SHyUSDDecimals = 6 // Staked hyUSD shares (same as hyUSD)
-	XSOLDecimals   = 6 // xSOL token precision (6 decimals, same as other Hylo tokens)
+	HyUSDDecimals   = 6 // Standard stablecoin precision (6 decimals)
+	SHyUSDDecimals  = 6 // Staked hyUSD shares (same as hyUSD)
+	XSOLDecimals    = 6 // xSOL token precision (6 decimals, same as other Hylo tokens)
+	USDCDecimals    = 6 // USDC standard precision (6 decimals)
+	JitoSOLDecimals = 9 // jitoSOL liquid staking token precision (9 decimals, same as SOL)
+	SOLDecimals     = 9 // SOL native token precision (9 decimals - lamports)
 
 	// Token Symbols for display and identification
-	HyUSDSymbol  = "hyUSD"
-	SHyUSDSymbol = "sHYUSD"
-	XSOLSymbol   = "xSOL"
+	HyUSDSymbol   = "hyUSD"
+	SHyUSDSymbol  = "sHYUSD"
+	XSOLSymbol    = "xSOL"
+	USDCSymbol    = "USDC"
+	JitoSOLSymbol = "jitoSOL"
 
 	// Token Display Names for user interfaces
-	HyUSDName  = "Hylo USD Stablecoin"
-	SHyUSDName = "Staked Hylo USD"
-	XSOLName   = "Leveraged SOL Token"
+	HyUSDName   = "Hylo USD Stablecoin"
+	SHyUSDName  = "Staked Hylo USD"
+	XSOLName    = "Leveraged SOL Token"
+	USDCName    = "USD Coin"
+	JitoSOLName = "Jito Staked SOL"
 )
 
-// Hylo Token Mint Addresses (Solana mainnet-beta)
-// Source: https://hylo.so documentation - Token Mints section
+// Token Mint Addresses (Solana mainnet-beta)
+// Hylo Protocol tokens and supported external tokens
 var (
 	// HyUSDMint is the mint address for hyUSD stablecoin
 	// Always pegged to 1 USD, backed by SOL LST collateral pool
@@ -51,19 +58,31 @@ var (
 	// Price = (Collateral TVL - hyUSD Supply) / xSOL Supply
 	// Absorbs SOL price volatility to maintain hyUSD 1:1 USD peg
 	XSOLMint = solana.Address("4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs")
+
+	// USDCMint is the mint address for USDC (USD Coin) stablecoin
+	// Official USD-pegged stablecoin by Centre/Coinbase
+	// Source: https://solscan.io/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+	USDCMint = solana.Address("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+
+	// JitoSOLMint is the mint address for jitoSOL (Jito Staked SOL)
+	// Liquid staking derivative that includes MEV rewards
+	// Source: https://solscan.io/token/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn
+	JitoSOLMint = solana.Address("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn")
 )
 
-// GetSupportedTokenMints returns all supported Hylo token mint addresses
+// GetSupportedTokenMints returns all supported token mint addresses
 // Used for validation and iteration over all supported tokens
 func GetSupportedTokenMints() []solana.Address {
 	return []solana.Address{
 		HyUSDMint,
 		SHyUSDMint,
 		XSOLMint,
+		USDCMint,
+		JitoSOLMint,
 	}
 }
 
-// IsValidTokenMint checks if the given address is a supported Hylo token mint
+// IsValidTokenMint checks if the given address is a supported token mint
 func IsValidTokenMint(mint solana.Address) bool {
 	supportedMints := GetSupportedTokenMints()
 	for _, supportedMint := range supportedMints {
@@ -84,6 +103,10 @@ func GetTokenSymbol(mint solana.Address) string {
 		return SHyUSDSymbol
 	case XSOLMint:
 		return XSOLSymbol
+	case USDCMint:
+		return USDCSymbol
+	case JitoSOLMint:
+		return JitoSOLSymbol
 	default:
 		return ""
 	}
@@ -99,6 +122,10 @@ func GetTokenDecimals(mint solana.Address) uint8 {
 		return SHyUSDDecimals
 	case XSOLMint:
 		return XSOLDecimals
+	case USDCMint:
+		return USDCDecimals
+	case JitoSOLMint:
+		return JitoSOLDecimals
 	default:
 		return 0
 	}
@@ -114,6 +141,10 @@ func GetTokenName(mint solana.Address) string {
 		return SHyUSDName
 	case XSOLMint:
 		return XSOLName
+	case USDCMint:
+		return USDCName
+	case JitoSOLMint:
+		return JitoSOLName
 	default:
 		return ""
 	}
