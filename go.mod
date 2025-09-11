@@ -8,6 +8,7 @@ require (
 	github.com/gagliardetto/solana-go v1.13.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-chi/cors v1.2.2
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/swaggo/http-swagger v1.3.4
