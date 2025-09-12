@@ -116,7 +116,7 @@ func formatAmount(rawAmount uint64, decimals uint8) string {
 // IsValidTrade checks if the trade has valid data
 func (t *XSOLTrade) IsValidTrade() bool {
 	return t.Signature != "" &&
-		(t.Side == TradeSideBuy || t.Side == TradeSideSell) &&
+		(t.Side == TradeSideBuy || t.Side == TradeSideSell || t.Side == TradeSideReceive) &&
 		t.XSOLAmountRaw > 0 &&
-		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD" || t.CounterAsset == "USDC" || t.CounterAsset == "jitoSOL")
+		(t.CounterAsset == "SOL" || t.CounterAsset == "hyUSD" || t.CounterAsset == "USDC" || t.CounterAsset == "jitoSOL" || t.CounterAsset == "")
 }
