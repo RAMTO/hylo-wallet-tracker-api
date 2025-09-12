@@ -76,16 +76,39 @@ func ParseTransactionWithContext(ctx context.Context, tx *solana.TransactionDeta
 		slog.String("signature", signature),
 		slog.Int("account_index", xsolAccountIndex))
 
-	// Look for xSOL token balance changes in pre/post token balances
+	// PRIORITY: Check for Hylo program instructions first
+	// This handles cases where users trade via Hylo Exchange, including first-time trades
+	hyloInstructionType := detectHyloInstructions(tx)
+	if hyloInstructionType != "" {
+		log.DebugContext(ctx, "Detected Hylo instruction, parsing as trade",
+			slog.String("signature", signature),
+			slog.String("instruction_type", hyloInstructionType))
+		return parseHyloTrade(ctx, tx, walletXSOLATA, xsolAccountIndex, hyloInstructionType, signature, log)
+	}
+
+	// FALLBACK: Look for xSOL token balance changes for non-Hylo transactions
 	preTokenBalance := findTokenBalance(tx.Meta.PreTokenBalances, uint32(xsolAccountIndex))
 	postTokenBalance := findTokenBalance(tx.Meta.PostTokenBalances, uint32(xsolAccountIndex))
 
-	// If no token balance data found, this is not a token trade
-	if preTokenBalance == nil || postTokenBalance == nil {
-		log.DebugContext(ctx, "No token balance data found, not a token trade",
-			slog.String("signature", signature),
-			slog.Bool("has_pre_balance", preTokenBalance != nil),
-			slog.Bool("has_post_balance", postTokenBalance != nil))
+	// Handle different balance scenarios for non-Hylo transactions:
+	// 1. Both pre and post balance exist -> external trade or transfer
+	// 2. Only post balance exists -> initial funding/transfer (RECEIVE)
+	// 3. Neither exist -> not a token transaction
+	if preTokenBalance == nil && postTokenBalance == nil {
+		log.DebugContext(ctx, "No token balance data found, not a token transaction",
+			slog.String("signature", signature))
+		return &TradeParseResult{}, nil
+	}
+
+	// Handle initial funding case (only post balance, no pre balance) - for non-Hylo transactions
+	if preTokenBalance == nil && postTokenBalance != nil {
+		return parseInitialFundingTransaction(ctx, tx, postTokenBalance, walletXSOLATA, signature, log)
+	}
+
+	// Handle case where pre balance exists but post balance doesn't (shouldn't happen in normal cases)
+	if preTokenBalance != nil && postTokenBalance == nil {
+		log.DebugContext(ctx, "Pre-balance exists but no post-balance, unusual transaction",
+			slog.String("signature", signature))
 		return &TradeParseResult{}, nil
 	}
 
@@ -253,7 +276,42 @@ func analyzeCounterAssetChanges(tx *solana.TransactionDetails, xsolIndex int, tr
 	return maxChange, counterAsset
 }
 
+// getAssetPriority returns priority score for counter asset selection
+// Higher priority assets are preferred over lower priority ones in multi-hop transactions
+func getAssetPriority(asset string) int {
+	switch asset {
+	case "hyUSD":
+		return 100 // Hylo native stablecoin - highest priority
+	case "USDC":
+		return 90 // USD stablecoin - very high priority
+	case "sHYUSD":
+		return 80 // Staked hyUSD - high priority
+	case "SOL":
+		return 50 // Native SOL - medium priority
+	case "jitoSOL":
+		return 30 // Liquid staking token - lower priority (often intermediate)
+	default:
+		return 10 // Unknown tokens - lowest priority
+	}
+}
+
+// shouldReplaceCounterAsset determines if a new candidate should replace the current counter asset
+// Prioritizes higher-priority assets (stablecoins) over lower-priority ones (intermediate assets)
+func shouldReplaceCounterAsset(currentAsset string, currentAmount uint64, newAsset string, newAmount uint64) bool {
+	currentPriority := getAssetPriority(currentAsset)
+	newPriority := getAssetPriority(newAsset)
+
+	// If priorities are different, choose higher priority asset
+	if newPriority != currentPriority {
+		return newPriority > currentPriority
+	}
+
+	// If same priority, choose larger amount (original logic)
+	return newAmount > currentAmount
+}
+
 // analyzeTokenBalanceChanges analyzes token balance changes to find counter assets like hyUSD/sHYUSD
+// Uses asset priority to prefer stablecoins (USDC, hyUSD) over intermediate assets (jitoSOL) in multi-hop transactions
 func analyzeTokenBalanceChanges(tx *solana.TransactionDetails, xsolIndex int, tradeSide string) (uint64, string) {
 	var maxChange uint64
 	var counterAsset string
@@ -304,13 +362,19 @@ func analyzeTokenBalanceChanges(tx *solana.TransactionDetails, xsolIndex int, tr
 			continue // No balance change
 		}
 
-		// Check if this matches the expected direction and is the largest change
-		if changeDirection == expectedChangeDirection && balanceChange > maxChange {
-			maxChange = balanceChange
-
+		// Check if this matches the expected direction
+		if changeDirection == expectedChangeDirection {
 			// Detect token type from mint address
+			var candidateAsset string
 			if preTokenBalance.Mint != "" {
-				counterAsset = detectTokenAssetType(preTokenBalance.Mint)
+				candidateAsset = detectTokenAssetType(preTokenBalance.Mint)
+			}
+
+			// Use priority-based selection instead of just largest amount
+			// This prefers stablecoins (USDC, hyUSD) over intermediate assets (jitoSOL)
+			if counterAsset == "" || shouldReplaceCounterAsset(counterAsset, maxChange, candidateAsset, balanceChange) {
+				maxChange = balanceChange
+				counterAsset = candidateAsset
 			}
 		}
 	}
@@ -444,6 +508,243 @@ func analyzeCounterAssetChangesWithLogging(ctx context.Context, tx *solana.Trans
 		slog.String("counter_asset", counterAsset))
 
 	return counterAmount, counterAsset
+}
+
+// detectHyloInstructions checks if the transaction contains Hylo program instructions
+func detectHyloInstructions(tx *solana.TransactionDetails) string {
+	hyloConfig := NewConfig()
+
+	// Check each instruction for Hylo program involvement
+	for _, instruction := range tx.Transaction.Message.Instructions {
+		if int(instruction.ProgramIdIndex) >= len(tx.Transaction.Message.AccountKeys) {
+			continue
+		}
+
+		programId := solana.Address(tx.Transaction.Message.AccountKeys[instruction.ProgramIdIndex])
+
+		// Check if this is a Hylo Exchange program instruction
+		if programId == hyloConfig.GetExchangeProgramID() {
+			// For now, we'll infer the instruction type from the transaction structure
+			// In a more sophisticated implementation, we'd decode the instruction data
+
+			// Check transaction structure to determine if it's mint or redeem
+			// This is a simplified approach - in reality we'd need instruction parsing
+			return inferHyloInstructionType(tx)
+		}
+	}
+
+	return ""
+}
+
+// inferHyloInstructionType infers whether this is a mint_levercoin or redeem_levercoin operation
+// This is a simplified approach based on balance changes until we implement full instruction parsing
+func inferHyloInstructionType(tx *solana.TransactionDetails) string {
+	// Look for xSOL balance changes to determine operation type
+	for _, preBalance := range tx.Meta.PreTokenBalances {
+		for _, postBalance := range tx.Meta.PostTokenBalances {
+			if preBalance.AccountIndex == postBalance.AccountIndex {
+				// Check if this is the xSOL token
+				if preBalance.Mint == string(tokens.XSOLMint) {
+					preAmount, _ := parseTokenAmount(preBalance.UITokenAmount)
+					postAmount, _ := parseTokenAmount(postBalance.UITokenAmount)
+
+					if postAmount > preAmount {
+						return MintLeverCoinInstruction // BUY - xSOL increased
+					} else if preAmount > postAmount {
+						return RedeemLeverCoinInstruction // SELL - xSOL decreased
+					}
+				}
+			}
+		}
+	}
+
+	// If we can't find matching pre/post balances, check if there's only a post balance (first-time mint)
+	for _, postBalance := range tx.Meta.PostTokenBalances {
+		if postBalance.Mint == string(tokens.XSOLMint) {
+			// Check if there's no corresponding pre balance (new account)
+			hasPreBalance := false
+			for _, preBalance := range tx.Meta.PreTokenBalances {
+				if preBalance.AccountIndex == postBalance.AccountIndex {
+					hasPreBalance = true
+					break
+				}
+			}
+			if !hasPreBalance {
+				return MintLeverCoinInstruction // This is a first-time mint (BUY)
+			}
+		}
+	}
+
+	return ""
+}
+
+// parseHyloTrade parses a transaction that contains Hylo program instructions
+func parseHyloTrade(ctx context.Context, tx *solana.TransactionDetails, walletXSOLATA solana.Address, xsolAccountIndex int, instructionType, signature string, log *logger.Logger) (*TradeParseResult, error) {
+	startTime := time.Now()
+
+	log.DebugContext(ctx, "Parsing Hylo trade transaction",
+		slog.String("signature", signature),
+		slog.String("instruction_type", instructionType),
+		slog.String("ata_address", walletXSOLATA.String()))
+
+	// Get pre and post balances for xSOL
+	preTokenBalance := findTokenBalance(tx.Meta.PreTokenBalances, uint32(xsolAccountIndex))
+	postTokenBalance := findTokenBalance(tx.Meta.PostTokenBalances, uint32(xsolAccountIndex))
+
+	// Handle different scenarios
+	var preAmount, postAmount uint64
+	var err error
+
+	// Parse pre-amount (may be 0 for first-time trades)
+	if preTokenBalance != nil {
+		preAmount, err = parseTokenAmountWithLogging(ctx, preTokenBalance.UITokenAmount, log, "pre-amount")
+		if err != nil {
+			log.LogParsingError(ctx, "parse_hylo_trade", "pre_token_amount", err,
+				slog.String("signature", signature))
+			return &TradeParseResult{
+				Error: fmt.Sprintf("failed to parse pre-token amount: %v", err),
+			}, nil
+		}
+	}
+
+	// Parse post-amount (should always exist for successful trades)
+	if postTokenBalance == nil {
+		log.LogParsingError(ctx, "parse_hylo_trade", "post_token_balance", fmt.Errorf("post token balance not found"),
+			slog.String("signature", signature))
+		return &TradeParseResult{
+			Error: "post token balance not found for Hylo trade",
+		}, nil
+	}
+
+	postAmount, err = parseTokenAmountWithLogging(ctx, postTokenBalance.UITokenAmount, log, "post-amount")
+	if err != nil {
+		log.LogParsingError(ctx, "parse_hylo_trade", "post_token_amount", err,
+			slog.String("signature", signature))
+		return &TradeParseResult{
+			Error: fmt.Sprintf("failed to parse post-token amount: %v", err),
+		}, nil
+	}
+
+	// Calculate xSOL amount and determine trade direction
+	var xsolAmount uint64
+	var tradeSide string
+
+	if instructionType == MintLeverCoinInstruction {
+		tradeSide = TradeSideBuy
+		xsolAmount = postAmount - preAmount
+		log.DebugContext(ctx, "Detected Hylo BUY trade",
+			slog.String("signature", signature),
+			slog.Uint64("pre_amount", preAmount),
+			slog.Uint64("post_amount", postAmount),
+			slog.Uint64("xsol_amount", xsolAmount))
+	} else if instructionType == RedeemLeverCoinInstruction {
+		tradeSide = TradeSideSell
+		xsolAmount = preAmount - postAmount
+		log.DebugContext(ctx, "Detected Hylo SELL trade",
+			slog.String("signature", signature),
+			slog.Uint64("pre_amount", preAmount),
+			slog.Uint64("post_amount", postAmount),
+			slog.Uint64("xsol_amount", xsolAmount))
+	} else {
+		log.WarnContext(ctx, "Unknown Hylo instruction type",
+			slog.String("signature", signature),
+			slog.String("instruction_type", instructionType))
+		return &TradeParseResult{
+			Error: fmt.Sprintf("unknown Hylo instruction type: %s", instructionType),
+		}, nil
+	}
+
+	// Skip if no actual xSOL change occurred
+	if xsolAmount == 0 {
+		log.DebugContext(ctx, "No xSOL balance change in Hylo trade",
+			slog.String("signature", signature))
+		return &TradeParseResult{}, nil
+	}
+
+	// Create base trade object
+	var blockTime int64
+	if tx.BlockTime != nil {
+		blockTime = *tx.BlockTime
+	}
+
+	trade := NewXSOLTrade(signature, uint64(tx.Slot), blockTime)
+
+	// Analyze other account balance changes to determine counter-asset
+	counterAmount, counterAsset := analyzeCounterAssetChangesWithLogging(ctx, tx, xsolAccountIndex, tradeSide, log)
+
+	// Set trade details
+	trade.SetTradeDetails(tradeSide, xsolAmount, counterAmount, counterAsset)
+
+	// Calculate historical price for hyUSD trades
+	trade.HistoricalPriceUSD = CalculateHistoricalXSOLPrice(trade)
+
+	// Log successful trade parsing with historical price info
+	priceInfo := "N/A (SOL trade)"
+	if trade.HistoricalPriceUSD != nil {
+		priceInfo = fmt.Sprintf("$%s", *trade.HistoricalPriceUSD)
+	}
+
+	log.InfoContext(ctx, "Successfully parsed Hylo xSOL trade",
+		slog.String("signature", signature),
+		slog.String("side", tradeSide),
+		slog.Uint64("xsol_amount", xsolAmount),
+		slog.Uint64("counter_amount", counterAmount),
+		slog.String("counter_asset", counterAsset),
+		slog.String("historical_price", priceInfo),
+		slog.Duration("parse_time", time.Since(startTime)))
+
+	return &TradeParseResult{
+		Trade: trade,
+	}, nil
+}
+
+// parseInitialFundingTransaction handles transactions where xSOL tokens are received for the first time
+// This covers initial mints, transfers, or other funding operations (NON-Hylo transactions only)
+func parseInitialFundingTransaction(ctx context.Context, tx *solana.TransactionDetails, postTokenBalance *solana.TokenBalance, walletXSOLATA solana.Address, signature string, log *logger.Logger) (*TradeParseResult, error) {
+	startTime := time.Now()
+
+	log.DebugContext(ctx, "Parsing initial funding transaction",
+		slog.String("signature", signature),
+		slog.String("ata_address", walletXSOLATA.String()))
+
+	// Parse the post-balance amount (this is the amount received)
+	receivedAmount, err := parseTokenAmountWithLogging(ctx, postTokenBalance.UITokenAmount, log, "received-amount")
+	if err != nil {
+		log.LogParsingError(ctx, "parse_initial_funding", "post_token_amount", err,
+			slog.String("signature", signature))
+		return &TradeParseResult{
+			Error: fmt.Sprintf("failed to parse received token amount: %v", err),
+		}, nil
+	}
+
+	// Skip if no tokens were actually received
+	if receivedAmount == 0 {
+		log.DebugContext(ctx, "No tokens received in initial funding transaction",
+			slog.String("signature", signature))
+		return &TradeParseResult{}, nil
+	}
+
+	// Create base trade object
+	var blockTime int64
+	if tx.BlockTime != nil {
+		blockTime = *tx.BlockTime
+	}
+
+	trade := NewXSOLTrade(signature, uint64(tx.Slot), blockTime)
+
+	// Set trade details for RECEIVE operation
+	// For initial funding, there's no counter asset exchange, so we leave it empty
+	trade.SetTradeDetails(TradeSideReceive, receivedAmount, 0, "")
+
+	log.InfoContext(ctx, "Successfully parsed initial xSOL funding",
+		slog.String("signature", signature),
+		slog.String("side", TradeSideReceive),
+		slog.Uint64("xsol_amount", receivedAmount),
+		slog.Duration("parse_time", time.Since(startTime)))
+
+	return &TradeParseResult{
+		Trade: trade,
+	}, nil
 }
 
 // ValidateTradeTransaction performs additional validation on a parsed trade

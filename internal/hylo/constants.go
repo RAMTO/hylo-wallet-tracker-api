@@ -31,8 +31,9 @@ const (
 
 // Trade Side Constants for consistent classification
 const (
-	TradeSideBuy  = "BUY"  // User mints xSOL (acquires leveraged SOL exposure)
-	TradeSideSell = "SELL" // User redeems xSOL (closes leveraged SOL position)
+	TradeSideBuy     = "BUY"     // User mints xSOL (acquires leveraged SOL exposure)
+	TradeSideSell    = "SELL"    // User redeems xSOL (closes leveraged SOL position)
+	TradeSideReceive = "RECEIVE" // User receives xSOL through transfer/mint (initial funding)
 )
 
 // Hylo Program IDs as solana.Address types for consistency with existing codebase

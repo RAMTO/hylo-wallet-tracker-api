@@ -1,5 +1,20 @@
+time=2025-09-12T11:23:15.223+03:00 level=INFO msg="Initializing Solana service" service=wallet-tracker-api version=v1.0.0 component=solana-service rpc_url="https://mainnet.helius-rpc.com/?api-key=c8bfddf2-4233-4eb5-9dc4-70009d5e8c27" timeout=30s max_retries=3
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Solana HTTP client created" service=wallet-tracker-api version=v1.0.0 component=solana-service component=solana-http-client rpc_url="https://mainnet.helius-rpc.com/?api-key=c8bfddf2-4233-4eb5-9dc4-70009d5e8c27" timeout=30s
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Solana service initialized successfully" service=wallet-tracker-api version=v1.0.0 component=solana-service
 ✅ Solana service created successfully
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Initializing Token service" service=wallet-tracker-api version=v1.0.0 component=token-service hyusd_mint=5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E shyusd_mint=HnnGv3HrSqjRpgdFmx7vQGjntNEoex1SU4e9Lxcxuihz xsol_mint=4sWNB8zGWHkh6UnmwiEtzNxL4XrN7uK9tosbESbJFfVs
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Token service initialized successfully" service=wallet-tracker-api version=v1.0.0 component=token-service
 ✅ Token service created successfully
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Initializing Trade service" service=wallet-tracker-api version=v1.0.0 component=trade-service
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Trade service initialized successfully" service=wallet-tracker-api version=v1.0.0 component=trade-service
+✅ Trade service created successfully
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Initializing DexScreener client" service=wallet-tracker-api version=v1.0.0 component=dexscreener-client timeout=10s rate_limit=10 rate_window=1m0s base_url=https://api.dexscreener.com
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="DexScreener client initialized successfully" service=wallet-tracker-api version=v1.0.0 component=dexscreener-client
+✅ Price service created successfully
+✅ Logger service created successfully
+time=2025-09-12T11:23:15.224+03:00 level=INFO msg="Starting initial Solana health check" service=wallet-tracker-api version=v1.0.0 component=solana-service
+time=2025-09-12T11:23:15.224+03:00 level=DEBUG msg="Performing Solana HTTP client health check" service=wallet-tracker-api version=v1.0.0 component=solana-service component=solana-http-client
+time=2025-09-12T11:23:15.224+03:00 level=DEBUG msg="Starting Solana RPC request" service=wallet-tracker-api version=v1.0.0 component=solana-service component=solana-http-client method=getAccountInfo max_retries=3
 🚀 Server is running on http://localhost:8080
 📖 Swagger documentation is available at http://localhost:8080/swagger/index.html
 panic: http server error: listen tcp :8080: bind: address already in use
@@ -7,4 +22,3 @@ panic: http server error: listen tcp :8080: bind: address already in use
 goroutine 1 [running]:
 main.main()
 	/Users/martindobrev/Code/Solana/hylo-wallet-tracker-api/cmd/api/main.go:68 +0x210
-exit status 2

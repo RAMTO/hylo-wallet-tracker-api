@@ -239,11 +239,12 @@ func (calc *PriceCalculator) IsCalculationStale(protocolState *HyloProtocolState
 }
 
 // CalculateHistoricalXSOLPrice calculates historical xSOL price from trade data
-// Only calculates for hyUSD trades, returns nil for SOL trades
-// Formula: price = hyUSD_amount / xSOL_amount (hyUSD ≈ $1 by design)
+// Only calculates for stablecoin trades (hyUSD, USDC), returns nil for volatile assets
+// Formula: price = stablecoin_amount / xSOL_amount (assuming stablecoin ≈ $1 USD)
 func CalculateHistoricalXSOLPrice(trade *XSOLTrade) *string {
-	// Skip if not hyUSD trade
-	if trade.CounterAsset != "hyUSD" {
+	// Skip if not a stablecoin trade
+	// Both hyUSD and USDC are designed to be pegged at $1 USD
+	if trade.CounterAsset != "hyUSD" && trade.CounterAsset != "USDC" {
 		return nil
 	}
 
@@ -253,13 +254,13 @@ func CalculateHistoricalXSOLPrice(trade *XSOLTrade) *string {
 		return nil
 	}
 
-	hyusdAmount, err := parseDecimalAmount(trade.CounterAmount)
-	if err != nil || hyusdAmount <= 0 {
+	stablecoinAmount, err := parseDecimalAmount(trade.CounterAmount)
+	if err != nil || stablecoinAmount <= 0 {
 		return nil
 	}
 
-	// Calculate: price = hyUSD_amount / xSOL_amount
-	price := hyusdAmount / xsolAmount
+	// Calculate: price = stablecoin_amount / xSOL_amount (stablecoin ≈ $1 USD)
+	price := stablecoinAmount / xsolAmount
 
 	// Sanity check: xSOL price should be reasonable ($1-$10,000 range)
 	if price < 1.0 || price > 10000.0 {

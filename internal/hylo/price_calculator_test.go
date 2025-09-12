@@ -48,6 +48,24 @@ func TestCalculateHistoricalXSOLPrice(t *testing.T) {
 			expected: stringPtr("5000.000"), // 5000 / 1 = 5000
 		},
 		{
+			name: "valid USDC trade - low price",
+			trade: &XSOLTrade{
+				XSOLAmount:    "10.0",
+				CounterAmount: "25.0",
+				CounterAsset:  "USDC",
+			},
+			expected: stringPtr("2.500"), // 25 / 10 = 2.5
+		},
+		{
+			name: "valid USDC trade - high price",
+			trade: &XSOLTrade{
+				XSOLAmount:    "0.5",
+				CounterAmount: "3000.0",
+				CounterAsset:  "USDC",
+			},
+			expected: stringPtr("6000.000"), // 3000 / 0.5 = 6000
+		},
+		{
 			name: "SOL trade - should return nil",
 			trade: &XSOLTrade{
 				XSOLAmount:    "2.0",
@@ -57,13 +75,13 @@ func TestCalculateHistoricalXSOLPrice(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "USDC trade - should return nil",
+			name: "USDC trade - should calculate historical price",
 			trade: &XSOLTrade{
 				XSOLAmount:    "1.5",
 				CounterAmount: "300.0",
 				CounterAsset:  "USDC",
 			},
-			expected: nil,
+			expected: stringPtr("200.000"), // 300 / 1.5 = 200
 		},
 		{
 			name: "jitoSOL trade - should return nil",
@@ -172,6 +190,42 @@ func TestCalculateHistoricalXSOLPrice(t *testing.T) {
 				CounterAsset:  "hyUSD",
 			},
 			expected: stringPtr("10000.000"), // 10000 / 1 = 10000
+		},
+		{
+			name: "USDC edge case - exactly $1 price (should be valid)",
+			trade: &XSOLTrade{
+				XSOLAmount:    "50.0",
+				CounterAmount: "50.0",
+				CounterAsset:  "USDC",
+			},
+			expected: stringPtr("1.000"), // 50 / 50 = 1.0
+		},
+		{
+			name: "USDC edge case - exactly $10,000 price (should be valid)",
+			trade: &XSOLTrade{
+				XSOLAmount:    "2.0",
+				CounterAmount: "20000.0",
+				CounterAsset:  "USDC",
+			},
+			expected: stringPtr("10000.000"), // 20000 / 2 = 10000
+		},
+		{
+			name: "USDC price too low - below $1 threshold",
+			trade: &XSOLTrade{
+				XSOLAmount:    "2000.0", // Very high xSOL amount
+				CounterAmount: "1000.0", // Moderate USDC amount
+				CounterAsset:  "USDC",
+			},
+			expected: nil, // Price = 1000/2000 = 0.5, below $1 threshold
+		},
+		{
+			name: "USDC price too high - above $10,000 threshold",
+			trade: &XSOLTrade{
+				XSOLAmount:    "0.001",   // Very small xSOL amount
+				CounterAmount: "50000.0", // Very high USDC amount
+				CounterAsset:  "USDC",
+			},
+			expected: nil, // Price = 50000/0.001 = 50,000,000, above $10,000 threshold
 		},
 	}
 
@@ -342,7 +396,7 @@ func TestParseTransactionWithHistoricalPrice(t *testing.T) {
 			expectedHistoricalPrice: nil, // SOL trades should not have historical price
 		},
 		{
-			name: "USDC trade - no historical price",
+			name: "USDC trade - with historical price",
 			trade: &XSOLTrade{
 				Signature:     "testSigUSDC",
 				Slot:          12348,
@@ -354,7 +408,7 @@ func TestParseTransactionWithHistoricalPrice(t *testing.T) {
 				Timestamp:     time.Now(),
 				ExplorerURL:   "https://solscan.io/tx/testSigUSDC",
 			},
-			expectedHistoricalPrice: nil, // USDC trades should not have historical price
+			expectedHistoricalPrice: stringPtr("200.000"), // USDC trades now calculate historical price: 200 / 1 = 200
 		},
 	}
 

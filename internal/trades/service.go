@@ -164,7 +164,8 @@ func (s *TradeService) GetWalletTrades(ctx context.Context, walletAddr solana.Ad
 
 // processSignatures fetches transaction details and parses them for xSOL trades
 func (s *TradeService) processSignatures(ctx context.Context, signatures []solana.SignatureInfo, xsolATA solana.Address, maxTrades int) ([]*hylo.XSOLTrade, error) {
-	var trades []*hylo.XSOLTrade
+	// Initialize as empty slice to ensure JSON serialization returns [] instead of null
+	trades := make([]*hylo.XSOLTrade, 0)
 
 	// Sort signatures by slot (newest first) to ensure consistent ordering
 	sort.Slice(signatures, func(i, j int) bool {
