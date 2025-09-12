@@ -960,6 +960,11 @@ func TestDetectTokenAssetType(t *testing.T) {
 			expectedType: "xSOL",
 		},
 		{
+			name:         "USDC mint",
+			mintAddress:  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+			expectedType: "USDC",
+		},
+		{
 			name:         "jitoSOL mint",
 			mintAddress:  "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
 			expectedType: "jitoSOL",
@@ -981,6 +986,101 @@ func TestDetectTokenAssetType(t *testing.T) {
 			result := detectTokenAssetType(tt.mintAddress)
 			if result != tt.expectedType {
 				t.Errorf("detectTokenAssetType(%q) = %q, want %q", tt.mintAddress, result, tt.expectedType)
+			}
+		})
+	}
+}
+
+// TestGetAssetPriority tests the asset priority scoring system
+func TestGetAssetPriority(t *testing.T) {
+	tests := []struct {
+		asset            string
+		expectedPriority int
+	}{
+		{"hyUSD", 100},
+		{"USDC", 90},
+		{"sHYUSD", 80},
+		{"SOL", 50},
+		{"jitoSOL", 30},
+		{"TOKEN", 10},
+		{"unknown", 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.asset, func(t *testing.T) {
+			priority := getAssetPriority(tt.asset)
+			if priority != tt.expectedPriority {
+				t.Errorf("getAssetPriority(%q) = %d, want %d", tt.asset, priority, tt.expectedPriority)
+			}
+		})
+	}
+}
+
+// TestShouldReplaceCounterAsset tests the counter asset replacement logic
+func TestShouldReplaceCounterAsset(t *testing.T) {
+	tests := []struct {
+		name          string
+		currentAsset  string
+		currentAmount uint64
+		newAsset      string
+		newAmount     uint64
+		shouldReplace bool
+		description   string
+	}{
+		{
+			name:          "USDC should replace jitoSOL (priority)",
+			currentAsset:  "jitoSOL",
+			currentAmount: 4000000000, // 4.0 jitoSOL (9 decimals)
+			newAsset:      "USDC",
+			newAmount:     1101748322, // 1,101.748322 USDC (6 decimals)
+			shouldReplace: true,
+			description:   "Higher priority USDC should replace lower priority jitoSOL despite smaller raw amount",
+		},
+		{
+			name:          "hyUSD should replace USDC (priority)",
+			currentAsset:  "USDC",
+			currentAmount: 1000000000,
+			newAsset:      "hyUSD",
+			newAmount:     500000000,
+			shouldReplace: true,
+			description:   "Higher priority hyUSD should replace USDC",
+		},
+		{
+			name:          "Same priority - larger amount wins",
+			currentAsset:  "USDC",
+			currentAmount: 1000000,
+			newAsset:      "USDC",
+			newAmount:     2000000,
+			shouldReplace: true,
+			description:   "Same asset priority, larger amount should replace",
+		},
+		{
+			name:          "Same priority - smaller amount loses",
+			currentAsset:  "USDC",
+			currentAmount: 2000000,
+			newAsset:      "USDC",
+			newAmount:     1000000,
+			shouldReplace: false,
+			description:   "Same asset priority, smaller amount should not replace",
+		},
+		{
+			name:          "Lower priority should not replace",
+			currentAsset:  "USDC",
+			currentAmount: 1000000,
+			newAsset:      "jitoSOL",
+			newAmount:     5000000000,
+			shouldReplace: false,
+			description:   "Lower priority jitoSOL should not replace USDC even with larger amount",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := shouldReplaceCounterAsset(tt.currentAsset, tt.currentAmount, tt.newAsset, tt.newAmount)
+			if result != tt.shouldReplace {
+				t.Errorf("shouldReplaceCounterAsset(%q, %d, %q, %d) = %v, want %v. %s",
+					tt.currentAsset, tt.currentAmount, tt.newAsset, tt.newAmount,
+					result, tt.shouldReplace, tt.description)
 			}
 		})
 	}

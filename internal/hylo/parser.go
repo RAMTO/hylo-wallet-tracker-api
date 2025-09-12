@@ -276,7 +276,42 @@ func analyzeCounterAssetChanges(tx *solana.TransactionDetails, xsolIndex int, tr
 	return maxChange, counterAsset
 }
 
+// getAssetPriority returns priority score for counter asset selection
+// Higher priority assets are preferred over lower priority ones in multi-hop transactions
+func getAssetPriority(asset string) int {
+	switch asset {
+	case "hyUSD":
+		return 100 // Hylo native stablecoin - highest priority
+	case "USDC":
+		return 90 // USD stablecoin - very high priority
+	case "sHYUSD":
+		return 80 // Staked hyUSD - high priority
+	case "SOL":
+		return 50 // Native SOL - medium priority
+	case "jitoSOL":
+		return 30 // Liquid staking token - lower priority (often intermediate)
+	default:
+		return 10 // Unknown tokens - lowest priority
+	}
+}
+
+// shouldReplaceCounterAsset determines if a new candidate should replace the current counter asset
+// Prioritizes higher-priority assets (stablecoins) over lower-priority ones (intermediate assets)
+func shouldReplaceCounterAsset(currentAsset string, currentAmount uint64, newAsset string, newAmount uint64) bool {
+	currentPriority := getAssetPriority(currentAsset)
+	newPriority := getAssetPriority(newAsset)
+
+	// If priorities are different, choose higher priority asset
+	if newPriority != currentPriority {
+		return newPriority > currentPriority
+	}
+
+	// If same priority, choose larger amount (original logic)
+	return newAmount > currentAmount
+}
+
 // analyzeTokenBalanceChanges analyzes token balance changes to find counter assets like hyUSD/sHYUSD
+// Uses asset priority to prefer stablecoins (USDC, hyUSD) over intermediate assets (jitoSOL) in multi-hop transactions
 func analyzeTokenBalanceChanges(tx *solana.TransactionDetails, xsolIndex int, tradeSide string) (uint64, string) {
 	var maxChange uint64
 	var counterAsset string
@@ -327,13 +362,19 @@ func analyzeTokenBalanceChanges(tx *solana.TransactionDetails, xsolIndex int, tr
 			continue // No balance change
 		}
 
-		// Check if this matches the expected direction and is the largest change
-		if changeDirection == expectedChangeDirection && balanceChange > maxChange {
-			maxChange = balanceChange
-
+		// Check if this matches the expected direction
+		if changeDirection == expectedChangeDirection {
 			// Detect token type from mint address
+			var candidateAsset string
 			if preTokenBalance.Mint != "" {
-				counterAsset = detectTokenAssetType(preTokenBalance.Mint)
+				candidateAsset = detectTokenAssetType(preTokenBalance.Mint)
+			}
+
+			// Use priority-based selection instead of just largest amount
+			// This prefers stablecoins (USDC, hyUSD) over intermediate assets (jitoSOL)
+			if counterAsset == "" || shouldReplaceCounterAsset(counterAsset, maxChange, candidateAsset, balanceChange) {
+				maxChange = balanceChange
+				counterAsset = candidateAsset
 			}
 		}
 	}
@@ -472,26 +513,26 @@ func analyzeCounterAssetChangesWithLogging(ctx context.Context, tx *solana.Trans
 // detectHyloInstructions checks if the transaction contains Hylo program instructions
 func detectHyloInstructions(tx *solana.TransactionDetails) string {
 	hyloConfig := NewConfig()
-	
+
 	// Check each instruction for Hylo program involvement
 	for _, instruction := range tx.Transaction.Message.Instructions {
 		if int(instruction.ProgramIdIndex) >= len(tx.Transaction.Message.AccountKeys) {
 			continue
 		}
-		
+
 		programId := solana.Address(tx.Transaction.Message.AccountKeys[instruction.ProgramIdIndex])
-		
+
 		// Check if this is a Hylo Exchange program instruction
 		if programId == hyloConfig.GetExchangeProgramID() {
 			// For now, we'll infer the instruction type from the transaction structure
 			// In a more sophisticated implementation, we'd decode the instruction data
-			
+
 			// Check transaction structure to determine if it's mint or redeem
 			// This is a simplified approach - in reality we'd need instruction parsing
 			return inferHyloInstructionType(tx)
 		}
 	}
-	
+
 	return ""
 }
 
@@ -506,7 +547,7 @@ func inferHyloInstructionType(tx *solana.TransactionDetails) string {
 				if preBalance.Mint == string(tokens.XSOLMint) {
 					preAmount, _ := parseTokenAmount(preBalance.UITokenAmount)
 					postAmount, _ := parseTokenAmount(postBalance.UITokenAmount)
-					
+
 					if postAmount > preAmount {
 						return MintLeverCoinInstruction // BUY - xSOL increased
 					} else if preAmount > postAmount {
@@ -516,7 +557,7 @@ func inferHyloInstructionType(tx *solana.TransactionDetails) string {
 			}
 		}
 	}
-	
+
 	// If we can't find matching pre/post balances, check if there's only a post balance (first-time mint)
 	for _, postBalance := range tx.Meta.PostTokenBalances {
 		if postBalance.Mint == string(tokens.XSOLMint) {
@@ -533,7 +574,7 @@ func inferHyloInstructionType(tx *solana.TransactionDetails) string {
 			}
 		}
 	}
-	
+
 	return ""
 }
 
